@@ -1,0 +1,86 @@
+# [PROTEGIDO] CI/CD do LouFlow.
+# CI em todo push e PR para develop/main: lint, typecheck, testes (Postgres em container) e build.
+# CD só em push: develop -> Neon develop + Vercel preview; main -> Neon main + Vercel produção.
+# Variáveis secretas (definidas na pipeline, nunca no repositório):
+#   VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID,
+#   DATABASE_URL_MIGRATE_DEVELOP, DATABASE_URL_MIGRATE_MAIN (connection string direta, sem pooler).
+# Sem elas, as etapas de migrate/deploy são puladas com aviso e a pipeline continua verde.
+
+trigger:
+  branches:
+    include: [develop, main]
+
+pr:
+  branches:
+    include: [develop, main]
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: ci
+    displayName: CI
+    jobs:
+      - job: qualidade
+        displayName: Lint, typecheck, testes e build
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '24.x'
+          - script: |
+              corepack enable
+              corepack prepare pnpm@11.13.0 --activate
+              pnpm install --frozen-lockfile
+            displayName: Instalar dependências
+          - script: pnpm lint
+            displayName: Lint
+          - script: pnpm typecheck
+            displayName: Typecheck
+          - script: pnpm test:db
+            displayName: Testes (Postgres de teste)
+          - script: pnpm build
+            displayName: Build
+            env:
+              NEXT_TELEMETRY_DISABLED: '1'
+
+  - stage: cd
+    displayName: Migrate e deploy
+    dependsOn: ci
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranchName'], 'develop', 'main'))
+    jobs:
+      - job: entrega
+        displayName: Migrations + Vercel
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '24.x'
+          - script: |
+              corepack enable
+              corepack prepare pnpm@11.13.0 --activate
+              pnpm install --frozen-lockfile
+            displayName: Instalar dependências
+
+          - script: |
+              set -e
+              if [ "$(Build.SourceBranchName)" = "main" ]; then URL="$URL_MAIN"; else URL="$URL_DEVELOP"; fi
+              case "$URL" in ""|'$('*) echo "##vso[task.logissue type=warning]Connection string de migration ausente: migrations puladas"; exit 0;; esac
+              DATABASE_URL="$URL" pnpm db:migrate
+            displayName: Migrations (Neon)
+            env:
+              URL_DEVELOP: $(DATABASE_URL_MIGRATE_DEVELOP)
+              URL_MAIN: $(DATABASE_URL_MIGRATE_MAIN)
+
+          - script: |
+              set -e
+              case "$VERCEL_TOKEN" in ""|'$('*) echo "##vso[task.logissue type=warning]VERCEL_TOKEN ausente: deploy pulado"; exit 0;; esac
+              if [ "$(Build.SourceBranchName)" = "main" ]; then AMBIENTE=production; FLAG=--prod; else AMBIENTE=preview; FLAG=; fi
+              pnpm dlx vercel@latest pull --yes --environment=$AMBIENTE --token="$VERCEL_TOKEN"
+              pnpm dlx vercel@latest build $FLAG --token="$VERCEL_TOKEN"
+              pnpm dlx vercel@latest deploy --prebuilt $FLAG --token="$VERCEL_TOKEN" > url-deploy.txt
+              echo "Deploy: $(cat url-deploy.txt)"
+            displayName: Deploy Vercel
+            env:
+              VERCEL_TOKEN: $(VERCEL_TOKEN)
+              VERCEL_ORG_ID: $(VERCEL_ORG_ID)
+              VERCEL_PROJECT_ID: $(VERCEL_PROJECT_ID)
+              NEXT_TELEMETRY_DISABLED: '1'
