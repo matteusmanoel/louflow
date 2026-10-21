@@ -1,0 +1,35 @@
+# Dados reais e legado Apps Script: nunca versionar
+*.xlsx
+*.xls
+*.csv
+demandas-edits/
+demandas-edits-web/
+exports/
+
+# Segredos
+.env
+.env.*
+!.env.example
+.vercel/
+
+# Agentes locais
+.cursor/
+manifest/
+docs/reports/
+# Descoberta contém IDs de implantação e nomes do legado
+docs/descoberta-louflow.md
+
+# Build e dependências
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+test-results/
+playwright-report/
+
+# Sistema
+.DS_Store
+*.log
