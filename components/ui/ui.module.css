@@ -1,0 +1,127 @@
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: var(--raio-botao);
+  border: 1px solid var(--loumar-700);
+  background: linear-gradient(135deg, var(--loumar-800), var(--loumar-600));
+  color: var(--branco);
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: var(--sombra-botao);
+  cursor: pointer;
+  text-decoration: none;
+}
+.botao:hover {
+  filter: brightness(1.04);
+}
+.botao:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.neutro {
+  background: var(--superficie);
+  border-color: var(--borda-app);
+  color: var(--loumar-800);
+  box-shadow: none;
+  border-radius: var(--raio-botao-neutro);
+}
+
+.campo {
+  display: grid;
+  gap: 6px;
+}
+.rotulo {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--texto-suave);
+}
+.input {
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: var(--raio-input);
+  border: 1px solid var(--borda-app);
+  background: var(--superficie);
+  font-size: 14px;
+}
+
+.cartao {
+  background: var(--superficie);
+  border: 1px solid var(--borda-app);
+  border-radius: var(--raio-card);
+  box-shadow: var(--sombra-card);
+  padding: 20px;
+}
+
+.pilula {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--raio-pilula);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.prioridade-Baixa {
+  background: var(--prioridade-baixa-fundo);
+  color: var(--prioridade-baixa-texto);
+}
+.prioridade-Normal {
+  background: var(--prioridade-normal-fundo);
+  color: var(--prioridade-normal-texto);
+}
+.prioridade-Alta {
+  background: var(--prioridade-alta-fundo);
+  color: var(--prioridade-alta-texto);
+}
+.prioridade-Urgente {
+  background: var(--prioridade-urgente-fundo);
+  color: var(--prioridade-urgente-texto);
+}
+.status {
+  background: var(--chip-leitura-fundo);
+  color: var(--chip-leitura-texto);
+  border: 1px solid var(--chip-leitura-borda);
+  text-transform: none;
+}
+.status-Aprovacao {
+  background: var(--chip-aprovacao-fundo);
+  color: var(--chip-aprovacao-texto);
+  border-color: var(--chip-aprovacao-borda);
+}
+
+.aviso {
+  padding: 12px 14px;
+  border-radius: var(--raio-card);
+  border: 1px solid var(--chip-aprovacao-borda);
+  background: var(--chip-aprovacao-fundo);
+  color: var(--chip-aprovacao-texto);
+  font-weight: 700;
+}
+.erro {
+  border-color: var(--prioridade-urgente-texto);
+  background: var(--prioridade-urgente-fundo);
+  color: var(--prioridade-urgente-texto);
+}
+
+.titulo {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 800;
+}
+.sobretitulo {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--loumar-700);
+}
+.suave {
+  color: var(--texto-suave);
+}

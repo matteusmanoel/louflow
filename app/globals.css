@@ -1,0 +1,177 @@
+/* Tokens de docs/design-tokens.md. Componentes não usam hex soltos: só estas variáveis. */
+:root {
+  --loumar-950: #00283d;
+  --loumar-900: #003b59;
+  --loumar-800: #075577;
+  --loumar-700: #0875a8;
+  --loumar-600: #0b8dca;
+  --loumar-100: #dff3fb;
+  --loumar-50: #f2f9fc;
+
+  --superficie: #ffffff;
+  --fundo-app: #eef3f6;
+  --borda-app: #dce5ea;
+  --texto-forte: #183143;
+  --texto-suave: #667985;
+  --branco: #ffffff;
+
+  --tabela-cabecalho-fundo: #f2f6f8;
+  --tabela-cabecalho-texto: #5d7280;
+  --tabela-cabecalho-borda: #d7e1e7;
+  --tabela-linha-borda: #e6edf1;
+  --tabela-linha-hover: #f7fbfd;
+  --overlay-modal: rgba(0, 35, 53, 0.54);
+
+  --prioridade-baixa-fundo: #e8f0fe;
+  --prioridade-baixa-texto: #174ea6;
+  --prioridade-normal-fundo: #e6f4ea;
+  --prioridade-normal-texto: #137333;
+  --prioridade-alta-fundo: #fef7e0;
+  --prioridade-alta-texto: #b06000;
+  --prioridade-urgente-fundo: #fce8e6;
+  --prioridade-urgente-texto: #c5221f;
+
+  --chip-aprovacao-fundo: #fff8dc;
+  --chip-aprovacao-texto: #875700;
+  --chip-aprovacao-borda: #eac666;
+  --chip-leitura-fundo: #f6f9fc;
+  --chip-leitura-texto: #42566f;
+  --chip-leitura-borda: #d6e0ec;
+
+  --linha-atrasada-fundo: #fff1f1;
+  --linha-atrasada-texto: #c5221f;
+  --linha-prazo-fundo: #fff8e1;
+  --linha-prazo-texto: #b06000;
+
+  --alerta-atrasada: #c61f17;
+  --alerta-atrasada-fundo: #fff7f6;
+  --alerta-hoje: #d9480f;
+  --alerta-hoje-fundo: #fff7ed;
+  --alerta-amanha: #b45309;
+  --alerta-amanha-fundo: #fffaeb;
+  --alerta-2dias: #92620a;
+  --alerta-2dias-fundo: #fffdf3;
+
+  --raio-botao: 9px;
+  --raio-botao-neutro: 8px;
+  --raio-input: 10px;
+  --raio-card: 12px;
+  --raio-painel: 14px;
+  --raio-modal: 16px;
+  --raio-login: 20px;
+  --raio-pilula: 999px;
+
+  --sombra-botao: 0 6px 16px rgba(0, 91, 132, 0.16);
+  --sombra-card: 0 4px 16px rgba(0, 53, 79, 0.045);
+  --sombra-painel: 0 8px 26px rgba(0, 53, 79, 0.06);
+  --sombra-topo: 0 3px 16px rgba(0, 52, 78, 0.05);
+  --sombra-menu: 8px 0 28px rgba(0, 33, 50, 0.12);
+  --sombra-modal: 0 30px 90px rgba(0, 35, 53, 0.25);
+  --sombra-login: 0 24px 70px rgba(0, 48, 73, 0.18);
+  --anel-foco: 0 0 0 3px rgba(11, 141, 202, 0.12);
+
+  --menu-largura: 256px;
+  --menu-recolhido: 82px;
+  --topo-altura: 76px;
+  --conteudo-padding: 28px;
+
+  --fonte: Arial, Helvetica, sans-serif;
+  color-scheme: light;
+}
+
+[data-tema='escuro'] {
+  --superficie: #102733;
+  --fundo-app: #071922;
+  --borda-app: #294654;
+  --texto-forte: #edf7fb;
+  --texto-suave: #9fb6c2;
+  --loumar-50: #122f3d;
+  --loumar-100: #163c4c;
+  --tabela-cabecalho-fundo: #122f3d;
+  --tabela-cabecalho-texto: #9fb6c2;
+  --tabela-cabecalho-borda: #294654;
+  --tabela-linha-borda: #294654;
+  --tabela-linha-hover: #163c4c;
+  --alerta-atrasada: #ff8a80;
+  --alerta-atrasada-fundo: #302225;
+  --alerta-hoje: #ffad72;
+  --alerta-hoje-fundo: #30271f;
+  --alerta-amanha: #ffd166;
+  --alerta-amanha-fundo: #142a34;
+  --alerta-2dias: #ffd166;
+  --alerta-2dias-fundo: #142a34;
+  color-scheme: dark;
+}
+
+@media (max-width: 1180px) {
+  :root {
+    --menu-largura: 232px;
+    --conteudo-padding: 24px;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--fonte);
+  font-size: 13px;
+  color: var(--texto-forte);
+  background: var(--fundo-app);
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-tema='escuro'] body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(11, 141, 202, 0.14), transparent 42%),
+    radial-gradient(circle at 88% 92%, rgba(7, 85, 119, 0.16), transparent 46%),
+    var(--fundo-app);
+}
+
+a {
+  color: var(--loumar-700);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--anel-foco);
+  border-color: var(--loumar-600);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  :root,
+  [data-tema='escuro'] {
+    --superficie: #ffffff;
+    --fundo-app: #ffffff;
+    --texto-forte: #111827;
+    color-scheme: light;
+  }
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+}
