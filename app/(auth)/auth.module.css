@@ -1,0 +1,43 @@
+.pagina {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(135deg, var(--loumar-900), var(--loumar-950));
+}
+.cartao {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 18px;
+  padding: 36px 32px;
+  background: var(--superficie);
+  border-radius: var(--raio-login);
+  box-shadow: var(--sombra-login);
+}
+.logo {
+  width: 210px;
+  height: auto;
+  justify-self: center;
+}
+.titulo {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  text-align: center;
+}
+.subtitulo {
+  margin: -8px 0 0;
+  text-align: center;
+  color: var(--texto-suave);
+}
+.form {
+  display: grid;
+  gap: 14px;
+}
+.lembrar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
