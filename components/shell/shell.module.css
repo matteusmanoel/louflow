@@ -1,0 +1,170 @@
+.grade {
+  display: grid;
+  grid-template-columns: var(--menu-largura) 1fr;
+  grid-template-rows: var(--topo-altura) 1fr;
+  grid-template-areas:
+    'menu topo'
+    'menu conteudo';
+  min-height: 100vh;
+}
+:global([data-menu='recolhido']) .grade {
+  grid-template-columns: var(--menu-recolhido) 1fr;
+}
+
+.menu {
+  grid-area: menu;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  background: linear-gradient(180deg, var(--loumar-900), var(--loumar-950));
+  color: var(--branco);
+  box-shadow: var(--sombra-menu);
+  padding: 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.marca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px 10px;
+}
+.logo {
+  width: 150px;
+  height: auto;
+  filter: brightness(0) invert(1);
+}
+.recolher {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--branco);
+  border-radius: var(--raio-botao-neutro);
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+}
+.grupo {
+  display: grid;
+  gap: 2px;
+}
+.grupoTitulo {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  padding: 6px 10px;
+}
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--raio-botao-neutro);
+  color: var(--branco);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+  opacity: 0.86;
+}
+.item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 1;
+}
+.item[aria-current='page'] {
+  background: rgba(255, 255, 255, 0.16);
+  opacity: 1;
+}
+.sigla {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--raio-botao-neutro);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 11px;
+  font-weight: 800;
+  flex: none;
+}
+:global([data-menu='recolhido']) .rotuloItem,
+:global([data-menu='recolhido']) .grupoTitulo,
+:global([data-menu='recolhido']) .logo {
+  display: none;
+}
+
+.topo {
+  grid-area: topo;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 var(--conteudo-padding);
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borda-app);
+  box-shadow: var(--sombra-topo);
+}
+.usuario {
+  display: grid;
+  line-height: 1.3;
+}
+.usuarioNome {
+  font-weight: 800;
+  font-size: 14px;
+}
+.usuarioPerfil {
+  font-size: 11px;
+  color: var(--texto-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+.acoes {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.conteudo {
+  grid-area: conteudo;
+  padding: var(--conteudo-padding);
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+@media (max-width: 980px) {
+  .grade,
+  :global([data-menu='recolhido']) .grade {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto var(--topo-altura) 1fr;
+    grid-template-areas: 'menu' 'topo' 'conteudo';
+  }
+  .menu {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 650px) {
+  .conteudo {
+    padding: 14px;
+  }
+}
+
+@media print {
+  .menu,
+  .topo {
+    display: none;
+  }
+  .grade {
+    display: block;
+  }
+}

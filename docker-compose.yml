@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: louflow
+      POSTGRES_PASSWORD: louflow
+      POSTGRES_DB: louflow
+    ports:
+      - '54329:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U louflow']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    tmpfs:
+      - /var/lib/postgresql/data
