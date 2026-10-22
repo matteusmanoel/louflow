@@ -1,0 +1,70 @@
+.lista {
+  display: grid;
+  gap: 12px;
+}
+
+.linha {
+  padding: 16px;
+}
+
+.topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.badgeEmUso {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--raio-pilula);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--prioridade-urgente-fundo);
+  color: var(--prioridade-urgente-texto);
+}
+
+.badgeReservada {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--raio-pilula);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--chip-aprovacao-fundo);
+  color: var(--chip-aprovacao-texto);
+  border: 1px solid var(--chip-aprovacao-borda);
+}
+
+.badgeFinalizada {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--raio-pilula);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--chip-leitura-fundo);
+  color: var(--chip-leitura-texto);
+  border: 1px solid var(--chip-leitura-borda);
+}
+
+.badgeCancelada {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--raio-pilula);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--superficie);
+  color: var(--texto-suave);
+  border: 1px solid var(--borda-app);
+}
