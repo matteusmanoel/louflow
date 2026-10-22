@@ -1,0 +1,114 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--raio-pilula);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--chip-leitura-fundo);
+  color: var(--chip-leitura-texto);
+  border: 1px solid var(--chip-leitura-borda);
+}
+
+.badge-Agendada {
+  background: var(--chip-aprovacao-fundo);
+  color: var(--chip-aprovacao-texto);
+  border-color: var(--chip-aprovacao-borda);
+}
+
+.badge-Concluida {
+  background: var(--chip-leitura-fundo);
+  color: var(--chip-leitura-texto);
+  border-color: var(--chip-leitura-borda);
+}
+
+.badge-Cancelada {
+  background: var(--prioridade-urgente-fundo);
+  color: var(--prioridade-urgente-texto);
+  border-color: var(--prioridade-urgente-texto);
+}
+
+/* Tabela */
+.tabelaWrap {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tabela th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--texto-suave);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--borda-app);
+}
+
+.tabela td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borda-app);
+  vertical-align: middle;
+}
+
+.tabela tr:last-child td {
+  border-bottom: none;
+}
+
+.link {
+  color: var(--loumar-700);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.suave {
+  color: var(--texto-suave);
+  font-size: 12px;
+}
+
+/* Formulário */
+.form {
+  display: grid;
+  gap: 16px;
+}
+
+.formDuplo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 650px) {
+  .formDuplo {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acoes {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.erroForm {
+  padding: 10px 14px;
+  border-radius: var(--raio-card);
+  background: var(--prioridade-urgente-fundo);
+  color: var(--prioridade-urgente-texto);
+  border: 1px solid var(--prioridade-urgente-texto);
+  font-weight: 700;
+  font-size: 13px;
+}
