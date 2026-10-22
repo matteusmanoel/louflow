@@ -1,0 +1,33 @@
+/*
+ * Tokens exclusivos do Painel de TV (docs/design-tokens.md §6).
+ * Não importar estes tokens no restante da interface principal.
+ */
+
+:root {
+  --tv-fundo: #0a0f18;
+  --tv-superficie: #131c2b;
+  --tv-borda: #1e2e42;
+  --tv-texto-forte: #eef1f5;
+  --tv-texto-suave: #8fa7b8;
+  --tv-destaque: #0b8dca;
+  --tv-destaque-suave: #0e6fa0;
+
+  --tv-urgente-fundo: #2e1a1a;
+  --tv-urgente-texto: #ff8a80;
+  --tv-alta-fundo: #2e2210;
+  --tv-alta-texto: #ffad72;
+  --tv-normal-fundo: #0e2618;
+  --tv-normal-texto: #81c995;
+  --tv-baixa-fundo: #0d1e2e;
+  --tv-baixa-texto: #8ab4f8;
+
+  --tv-status-nao-iniciada: #5d7280;
+  --tv-status-em-execucao: #0b8dca;
+  --tv-status-pausada: #b45309;
+  --tv-status-aprovacao: #875700;
+  --tv-status-ajustes: #c5221f;
+  --tv-status-reprovada: #c5221f;
+
+  --tv-raio-card: 12px;
+  --tv-fonte: Arial, Helvetica, sans-serif;
+}
