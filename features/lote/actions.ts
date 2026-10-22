@@ -1,13 +1,44 @@
 'use server';
 
-import type { Resultado } from '@/lib/action';
+import { z } from 'zod';
+import { criarAcao, type DefinicaoAcao } from '@/lib/action';
+import { processarLoteDesligamento as _processarLote } from './index';
 
-/**
- * S1-15 (#11570): desliga um Usuário — Demandas em execução ou pausadas voltam para Não iniciada
- * (pela máquina de Status), as em Aprovação são preservadas, e os acessos são invalidados.
- * A tela de Usuários (S1-01) já chama esta ação; a assinatura não muda.
- */
-export async function desligarUsuario(entrada: { usuarioId: string }): Promise<Resultado<null>> {
-  void entrada;
-  return { ok: false, mensagem: 'Desligamento ainda não disponível.' };
-}
+// ---------------------------------------------------------------------------
+// Re-exporta a função de domínio para que S1-01 possa chamar dentro de tx.
+// ---------------------------------------------------------------------------
+export { desligarUsuario } from './index';
+
+// ---------------------------------------------------------------------------
+// Schema
+// ---------------------------------------------------------------------------
+const schemaLoteDesligamento = z.object({
+  usuarioIds: z
+    .array(z.string().uuid({ message: 'ID de usuário inválido.' }))
+    .min(1, { message: 'Informe pelo menos um Usuário.' }),
+});
+
+// ---------------------------------------------------------------------------
+// Server Action — processamento em lote
+// ---------------------------------------------------------------------------
+export const defLoteDesligamento: DefinicaoAcao<
+  typeof schemaLoteDesligamento,
+  { processados: number; erros: string[] }
+> = {
+  nome: 'loteDesligamento',
+  schema: schemaLoteDesligamento,
+  permissao: 'gerenciarUsuarios',
+  executar: async ({ usuario, entrada }) => {
+    // Cada usuário é desligado em transação própria; erros não abortam o lote.
+    const resultado = await _processarLote(entrada.usuarioIds, usuario.id);
+
+    const mensagem =
+      resultado.erros.length === 0
+        ? `${resultado.processados} usuário(s) desligado(s) com sucesso.`
+        : `${resultado.processados} desligado(s); ${resultado.erros.length} com erro.`;
+
+    return { dados: resultado, mensagem };
+  },
+};
+
+export const processarLoteDesligamento = criarAcao(defLoteDesligamento);
