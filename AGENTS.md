@@ -97,3 +97,21 @@ Testes cobrem o comportamento público da fatia (Server Actions e consultas cont
 O sistema antigo (Apps Script) fica **fora do repositório**, apenas na máquina local, somente leitura:
 `/Users/matteusmanoel/Projects/Loumar/louflow/demandas-edits/` (código `.js`/`.html`).
 Use para conferir regras de negócio. Nunca copie dados, nunca faça commit desse diretório nem de planilhas (`*.xlsx`), e nunca reproduza nomes de pessoas no código. Se o legado conflitar com o PRD, o PRD vence.
+
+## Cursor Cloud specific instructions
+
+- Node 22+ e pnpm `11.28.6` (`packageManager`). Instale com `corepack enable && corepack install && pnpm install --frozen-lockfile`.
+- O Postgres local é o `docker-compose.yml`: porta `54329`, usuário, senha e banco `louflow`, dados em tmpfs (container novo começa vazio). Neste ambiente o daemon usa `fuse-overlayfs` e o backend `iptables-legacy`; é o que faz o handshake TCP em `localhost:54329` completar.
+- No boot, o `start` do Cloud Agent sobe o Docker, o Postgres, `pnpm db:migrate`, `pnpm db:seed` e `next dev` em `http://localhost:3000`. `.env.local` é criado se faltar, com as URLs do compose e o `PIN_PEPPER` já usado em `tests/setup-env.ts`.
+- Usuários sintéticos `@exemplo.test`. Enquanto `pin_hash` estiver vazio, o start grava o PIN de desenvolvimento `482916` (o mesmo tipo de credencial local que a senha `louflow` do compose; não é segredo de produção). O Administrador entra em `/demandas`.
+- Qualidade: `pnpm lint`, `pnpm typecheck`, `pnpm test:db` (recria `louflow_test`), `pnpm build`. `pnpm dev` é o servidor de desenvolvimento.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
