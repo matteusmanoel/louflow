@@ -1,7 +1,7 @@
 import postgres from 'postgres';
 import { aplicarMigrations, lerMigrations } from '../db/runner';
 
-export const URL_TESTE_PADRAO = 'postgres://louflow:louflow@localhost:54329/louflow_test';
+export const URL_TESTE_PADRAO = 'postgres://louflow:louflow@localhost:54336/louflow_test';
 
 /** Recria o banco de teste e aplica todas as migrations uma vez por execução. */
 export default async function setup() {
