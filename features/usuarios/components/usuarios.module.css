@@ -1,0 +1,125 @@
+.tabelaWrapper {
+  overflow-x: auto;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.tabela th,
+.tabela td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--cor-borda, #e5e7eb);
+}
+
+.tabela th {
+  font-weight: 600;
+  color: var(--cor-texto-suave, #6b7280);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.inativo td {
+  opacity: 0.55;
+}
+
+.ativo {
+  color: var(--cor-sucesso, #16a34a);
+  font-weight: 500;
+}
+
+.inativoLabel {
+  color: var(--cor-erro, #dc2626);
+  font-weight: 500;
+}
+
+.pinPendente {
+  color: var(--cor-aviso, #d97706);
+  font-weight: 500;
+}
+
+.link {
+  color: var(--cor-primaria, #2563eb);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.vazio {
+  color: var(--cor-texto-suave, #6b7280);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+/* Modal */
+.modal {
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0;
+  max-width: 24rem;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.modal::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modalTitulo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.modalAviso {
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+  color: var(--cor-texto-suave, #6b7280);
+}
+
+.pinDisplay {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: var(--cor-fundo-destaque, #f3f4f6);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  color: var(--cor-texto, #111827);
+}
+
+.modalSub {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave, #6b7280);
+  margin-bottom: 1.25rem;
+}
+
+/* Tabela de permissões */
+.tabelaPerms {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tabelaPerms th,
+.tabelaPerms td {
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--cor-borda, #e5e7eb);
+}
+
+.tabelaPerms th {
+  font-weight: 600;
+  color: var(--cor-texto-suave, #6b7280);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
