@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: louflow
       POSTGRES_DB: louflow
     ports:
-      - '54329:5432'
+      - '54331:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U louflow']
       interval: 2s
