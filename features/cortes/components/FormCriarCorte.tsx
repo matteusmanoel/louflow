@@ -1,19 +1,26 @@
 'use client';
 
 import { useTransition, useState } from 'react';
-import { Campo, Botao, Aviso } from '@/components/ui';
+import { Loader2 } from 'lucide-react';
 import { criarCorte } from '../actions';
 import { LINHAS_EDITORIAIS, PROGRAMAS_ORIGEM } from '../schema';
-import s from './cortes.module.css';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RodapeAcoes } from '@/components/ui/rodape-acoes';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { mostrarFeedback } from '@/lib/toast';
 
 export function FormCriarCorte({ aoSalvar }: { aoSalvar?: () => void }) {
   const [pending, startTransition] = useTransition();
-  const [mensagem, setMensagem] = useState<{ texto: string; tipo: 'aviso' | 'erro' } | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const form = e.currentTarget;
+    setErro(null);
 
     startTransition(async () => {
       const resultado = await criarCorte({
@@ -25,86 +32,90 @@ export function FormCriarCorte({ aoSalvar }: { aoSalvar?: () => void }) {
         programaOrigem: fd.get('programaOrigem') as (typeof PROGRAMAS_ORIGEM)[number],
       });
 
+      mostrarFeedback(resultado);
       if (resultado.ok) {
         form.reset();
-        setMensagem({ texto: resultado.mensagem, tipo: 'aviso' });
         aoSalvar?.();
       } else {
-        setMensagem({ texto: resultado.mensagem, tipo: 'erro' });
+        setErro(resultado.mensagem);
       }
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className={s.formulario} aria-label="Novo corte">
-      <p className={s.sectionTitle}>Novo Corte</p>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4" aria-label="Novo corte">
+      <p className="fonte-titulo text-sm font-semibold text-[var(--texto-forte)]">Novo Corte</p>
 
-      {mensagem && (
-        <Aviso tipo={mensagem.tipo}>{mensagem.texto}</Aviso>
+      {erro && (
+        <Alert variant="destructive">
+          <AlertDescription>{erro}</AlertDescription>
+        </Alert>
       )}
 
-      <Campo
-        rotulo="Título (tarefa) *"
-        id="titulo"
-        name="titulo"
-        placeholder="Ex.: Entrevista no centro de Foz"
-        required
-        maxLength={300}
-      />
-
-      <div className={s.grade}>
-        <div>
-          <label htmlFor="linhaEditorial" style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 13 }}>
-            Linha Editorial *
-          </label>
-          <select id="linhaEditorial" name="linhaEditorial" required style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--raio-input)', border: '1px solid var(--borda-app)', background: 'var(--superficie)', color: 'var(--texto-forte)' }}>
-            {LINHAS_EDITORIAIS.map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="programaOrigem" style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 13 }}>
-            Programa de Origem *
-          </label>
-          <select id="programaOrigem" name="programaOrigem" required style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--raio-input)', border: '1px solid var(--borda-app)', background: 'var(--superficie)', color: 'var(--texto-forte)' }}>
-            {PROGRAMAS_ORIGEM.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className={s.grade}>
-        <Campo
-          rotulo="Data de Postagem *"
-          id="dataPostagem"
-          name="dataPostagem"
-          type="date"
+      <div className="space-y-1.5">
+        <Label htmlFor="titulo">Título (tarefa) *</Label>
+        <Input
+          id="titulo"
+          name="titulo"
+          placeholder="Ex.: Entrevista no centro de Foz"
           required
-        />
-        <Campo
-          rotulo="ID do Influencer (opcional)"
-          id="influencerId"
-          name="influencerId"
-          placeholder="UUID do influencer"
+          maxLength={300}
         />
       </div>
 
-      <Campo
-        rotulo="Link do Vídeo (opcional)"
-        id="linkVideo"
-        name="linkVideo"
-        type="url"
-        placeholder="https://drive.google.com/..."
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="linhaEditorial">Linha Editorial *</Label>
+          <Select name="linhaEditorial" required>
+            <SelectTrigger id="linhaEditorial">
+              <SelectValue placeholder="Selecione…" />
+            </SelectTrigger>
+            <SelectContent>
+              {LINHAS_EDITORIAIS.map((l) => (
+                <SelectItem key={l} value={l}>{l}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="programaOrigem">Programa de Origem *</Label>
+          <Select name="programaOrigem" required>
+            <SelectTrigger id="programaOrigem">
+              <SelectValue placeholder="Selecione…" />
+            </SelectTrigger>
+            <SelectContent>
+              {PROGRAMAS_ORIGEM.map((p) => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="dataPostagem">Data de Postagem *</Label>
+          <Input id="dataPostagem" name="dataPostagem" type="date" required />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="influencerId">ID do Influencer (opcional)</Label>
+          <Input id="influencerId" name="influencerId" placeholder="UUID do influencer" />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="linkVideo">Link do Vídeo (opcional)</Label>
+        <Input id="linkVideo" name="linkVideo" type="url" placeholder="https://drive.google.com/…" />
+      </div>
+
+      <RodapeAcoes
+        primaria={
+          <Button type="submit" disabled={pending} className="w-full sm:w-auto">
+            {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+            {pending ? 'Salvando…' : 'Cadastrar Corte'}
+          </Button>
+        }
       />
-
-      <div className={s.acoes}>
-        <Botao type="submit" disabled={pending}>
-          {pending ? 'Salvando…' : 'Cadastrar Corte'}
-        </Botao>
-      </div>
     </form>
   );
 }

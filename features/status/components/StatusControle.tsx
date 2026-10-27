@@ -21,10 +21,13 @@ export async function StatusControle({ demandaId, usuario }: PropsSecaoDemanda) 
         <strong>Status atual:</strong> {demanda.status}
       </p>
       {proximos.length > 0 && (
-        <div>
-          <span>Transições disponíveis: </span>
+        <div className="mt-2 flex flex-wrap items-center gap-2" role="group" aria-label="Transições disponíveis">
           {proximos.map((s) => (
-            <span key={s} data-status={s}>
+            <span
+              key={s}
+              data-status={s}
+              className="rounded-[var(--raio-pilula)] border border-[var(--borda-app)] px-2.5 py-1 text-xs text-[var(--texto-forte)]"
+            >
               {s}
             </span>
           ))}

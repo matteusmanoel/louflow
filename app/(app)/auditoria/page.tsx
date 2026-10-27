@@ -1,7 +1,8 @@
 import { exigirModulo } from '@/lib/auth';
 import { listarAuditoria } from '@/features/auditoria/consultas';
 import { TabelaAuditoria } from '@/features/auditoria/components/TabelaAuditoria';
-import { Titulo } from '@/components/ui';
+import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
+import { ContainerPagina } from '@/components/ui/container-pagina';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,17 +11,18 @@ export default async function PaginaAuditoria() {
   const { registros, total, pagina, totalPaginas } = await listarAuditoria(1);
 
   return (
-    <main style={{ padding: 'var(--conteudo-padding)' }}>
-      <Titulo sobre="Administração">Auditoria</Titulo>
-      <p style={{ color: 'var(--cor-texto-secundario)', marginBottom: 16 }}>
-        Log de ações administrativas do sistema.
-      </p>
+    <ContainerPagina>
+      <CabecalhoPagina
+        grupo="Administração"
+        titulo="Auditoria"
+        descricao="Log de ações administrativas do sistema."
+      />
       <TabelaAuditoria
         registros={registros}
         pagina={pagina}
         totalPaginas={totalPaginas}
         total={total}
       />
-    </main>
+    </ContainerPagina>
   );
 }

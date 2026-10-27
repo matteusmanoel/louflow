@@ -1,6 +1,9 @@
 import type { PropsSecaoDemanda } from '@/features/demandas/secoes';
 import { obterFichaTecnicaDb } from '@/features/fichas/consultas';
 import { FormFichaTecnica } from './FormFichaTecnica';
+import { EditarFicha } from './EditarFicha';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { FileText } from 'lucide-react';
 
 /**
  * Seção reservada do detalhe da Demanda: Ficha Técnica da Demanda.
@@ -12,43 +15,21 @@ export async function FichaSecao({ demandaId, usuario }: PropsSecaoDemanda) {
 
   return (
     <section
-      style={{
-        background: 'var(--superficie)',
-        border: '1px solid var(--borda-app)',
-        borderRadius: 'var(--raio-painel)',
-        boxShadow: 'var(--sombra-painel)',
-        padding: '20px 24px',
-      }}
+      className="flex flex-col gap-4 rounded-[var(--raio-card)] border border-[var(--borda-app)] bg-[var(--superficie)] p-5 shadow-[var(--sombra-card)]"
     >
-      <h2
-        style={{
-          fontSize: '1rem',
-          fontWeight: 700,
-          color: 'var(--texto-forte)',
-          margin: '0 0 16px',
-        }}
-      >
-        Ficha Técnica
-      </h2>
+      <h2 className="text-base font-semibold text-[var(--texto-forte)] m-0">Ficha Técnica</h2>
 
       {!ficha && !podeEditar && (
-        <p style={{ color: 'var(--texto-suave)', fontSize: '0.875rem', margin: 0 }}>
-          Nenhuma ficha técnica registrada.
-        </p>
+        <EstadoVazio
+          icone={FileText}
+          titulo="Nenhuma ficha técnica"
+          descricao="A ficha técnica desta demanda ainda não foi preenchida."
+        />
       )}
 
       {ficha && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-            gap: '12px 24px',
-            marginBottom: podeEditar ? 24 : 0,
-          }}
-        >
-          {ficha.formato && (
-            <Detalhe rotulo="Formato" valor={ficha.formato} />
-          )}
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-x-6 gap-y-3">
+          {ficha.formato && <Detalhe rotulo="Formato" valor={ficha.formato} />}
           {ficha.duracaoSegundos != null && (
             <Detalhe rotulo="Duração" valor={formatarDuracao(ficha.duracaoSegundos)} />
           )}
@@ -56,80 +37,22 @@ export async function FichaSecao({ demandaId, usuario }: PropsSecaoDemanda) {
             <Detalhe rotulo="Plataformas" valor={ficha.plataformas.join(', ')} />
           )}
           {ficha.briefing && (
-            <div style={{ gridColumn: '1 / -1' }}>
-              <div
-                style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 500,
-                  color: 'var(--texto-suave)',
-                  marginBottom: 4,
-                }}
-              >
-                Briefing
-              </div>
-              <p
-                style={{
-                  fontSize: '0.9rem',
-                  color: 'var(--texto-forte)',
-                  margin: 0,
-                  whiteSpace: 'pre-wrap',
-                }}
-              >
-                {ficha.briefing}
-              </p>
+            <div className="col-span-full">
+              <Detalhe rotulo="Briefing" valor={ficha.briefing} multiline />
             </div>
           )}
           {ficha.observacoesTecnicas && (
-            <div style={{ gridColumn: '1 / -1' }}>
-              <div
-                style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 500,
-                  color: 'var(--texto-suave)',
-                  marginBottom: 4,
-                }}
-              >
-                Observações Técnicas
-              </div>
-              <p
-                style={{
-                  fontSize: '0.9rem',
-                  color: 'var(--texto-forte)',
-                  margin: 0,
-                  whiteSpace: 'pre-wrap',
-                }}
-              >
-                {ficha.observacoesTecnicas}
-              </p>
+            <div className="col-span-full">
+              <Detalhe rotulo="Observações Técnicas" valor={ficha.observacoesTecnicas} multiline />
             </div>
           )}
         </div>
       )}
 
       {podeEditar && (
-        <div
-          style={
-            ficha
-              ? { borderTop: '1px solid var(--tabela-linha-borda)', paddingTop: 20 }
-              : {}
-          }
-        >
-          {ficha && (
-            <p
-              style={{
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                color: 'var(--texto-suave)',
-                margin: '0 0 14px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              Editar Ficha Técnica
-            </p>
-          )}
+        <EditarFicha temFicha={ficha != null}>
           <FormFichaTecnica demandaId={demandaId} ficha={ficha} />
-        </div>
+        </EditarFicha>
       )}
     </section>
   );
@@ -137,20 +60,15 @@ export async function FichaSecao({ demandaId, usuario }: PropsSecaoDemanda) {
 
 // ---- helpers ----------------------------------------------------------------
 
-function Detalhe({ rotulo, valor }: { rotulo: string; valor: string }) {
+function Detalhe({ rotulo, valor, multiline }: { rotulo: string; valor: string; multiline?: boolean }) {
   return (
     <div>
-      <div
-        style={{
-          fontSize: '0.75rem',
-          fontWeight: 500,
-          color: 'var(--texto-suave)',
-          marginBottom: 2,
-        }}
-      >
-        {rotulo}
-      </div>
-      <div style={{ fontSize: '0.9rem', color: 'var(--texto-forte)' }}>{valor}</div>
+      <div className="text-xs font-medium text-[var(--texto-suave)] mb-0.5">{rotulo}</div>
+      {multiline ? (
+        <p className="text-sm text-[var(--texto-forte)] m-0 whitespace-pre-wrap">{valor}</p>
+      ) : (
+        <div className="text-sm text-[var(--texto-forte)]">{valor}</div>
+      )}
     </div>
   );
 }

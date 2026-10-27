@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import { CalendarDays, Pencil, User } from 'lucide-react';
 import type { Demanda } from '../consultas';
 import { BadgePrioridade } from './BadgePrioridade';
 import { BadgeStatus } from './BadgeStatus';
+import { cn } from '@/lib/utils';
 
 function formatarData(valor: string | null): string {
   if (!valor) return '—';
@@ -13,57 +15,68 @@ export function CardDemanda({ demanda }: { demanda: Demanda }) {
   const prazoFormatado = formatarData(demanda.prazo_efetivo);
 
   return (
-    <article
-      style={{
-        background: demanda.atrasada ? 'var(--linha-atrasada-fundo)' : 'var(--superficie)',
-        border: `1px solid ${demanda.atrasada ? 'var(--alerta-atrasada)' : 'var(--borda-app)'}`,
-        borderRadius: 'var(--raio-card)',
-        boxShadow: 'var(--sombra-card)',
-        padding: '14px 16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-      }}
+    <Link
+      href={`/demandas/${demanda.id}`}
+      className={cn(
+        'rounded-[var(--raio-card)] border bg-[var(--superficie)] p-4 shadow-[var(--sombra-card)]',
+        'flex flex-col gap-2 no-underline',
+        demanda.atrasada
+          ? 'border-[var(--alerta-atrasada)] bg-[var(--linha-atrasada-fundo)]'
+          : 'border-[var(--borda-app)]',
+      )}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <Link
-          href={`/demandas/${demanda.id}`}
-          style={{
-            color: demanda.atrasada ? 'var(--alerta-atrasada)' : 'var(--texto-forte)',
-            fontWeight: 600,
-            fontSize: '0.9rem',
-            textDecoration: 'none',
-            flex: 1,
-          }}
+      <div className="flex items-start justify-between gap-2">
+        <span
+          className={cn(
+            'fonte-titulo flex-1 text-sm font-semibold leading-snug',
+            demanda.atrasada ? 'text-[var(--alerta-atrasada)]' : 'text-[var(--texto-forte)]',
+          )}
         >
           {demanda.title}
-        </Link>
+        </span>
         <BadgePrioridade prioridade={demanda.priority} />
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+      {/* Status + formato */}
+      <div className="flex flex-wrap gap-1.5 items-center">
         <BadgeStatus status={demanda.status} />
-        <span style={{ fontSize: '0.78rem', color: 'var(--texto-suave)' }}>{demanda.format}</span>
+        <span className="text-[11px] text-[var(--texto-suave)]">{demanda.format}</span>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: '0.8rem', color: 'var(--texto-suave)' }}>
+      {/* Metadados */}
+      <div className="flex flex-wrap gap-3 text-[11px] text-[var(--texto-suave)]">
         {demanda.editor_label || demanda.editor_nome ? (
-          <span>
-            ✏️ {demanda.editor_label ?? demanda.editor_nome}
+          <span className="flex items-center gap-1">
+            <Pencil className="h-3 w-3" aria-hidden />
+            {demanda.editor_label ?? demanda.editor_nome}
           </span>
         ) : (
-          <span style={{ color: 'var(--alerta-hoje)' }}>✏️ A definir</span>
+          <span className="flex items-center gap-1 text-[var(--alerta-hoje)]">
+            <Pencil className="h-3 w-3" aria-hidden />
+            A definir
+          </span>
         )}
+
         {demanda.influencer_nome && (
-          <span>👤 {demanda.influencer_nome}</span>
+          <span className="flex items-center gap-1">
+            <User className="h-3 w-3" aria-hidden />
+            {demanda.influencer_nome}
+          </span>
         )}
+
         {demanda.prazo_efetivo && (
-          <span style={{ color: demanda.atrasada ? 'var(--alerta-atrasada)' : undefined }}>
-            📅 {prazoFormatado}
+          <span
+            className={cn(
+              'flex items-center gap-1',
+              demanda.atrasada && 'text-[var(--alerta-atrasada)] font-semibold'
+            )}
+          >
+            <CalendarDays className="h-3 w-3" aria-hidden />
+            <span className="fonte-numero">{prazoFormatado}</span>
             {demanda.atrasada && ' · ATRASADA'}
           </span>
         )}
       </div>
-    </article>
+    </Link>
   );
 }

@@ -1,19 +1,40 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, useTransition } from 'react';
+import { Search, X, SlidersHorizontal, Plus, FileText } from 'lucide-react';
 import type { Demanda, FiltrosListarDemandas, ResumoEditor } from '../consultas';
 import { CardDemanda } from './CardDemanda';
+import { QuadroKanban } from './QuadroKanban';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
 
 const INTERVALO_POLLING_MS = 30_000;
+const CONSULTA_ESTREITA = '(max-width: 649px)';
+
+function inscreverLargura(ouvir: () => void) {
+  const mq = window.matchMedia(CONSULTA_ESTREITA);
+  mq.addEventListener('change', ouvir);
+  return () => mq.removeEventListener('change', ouvir);
+}
+
+function larguraEstreita() {
+  return window.matchMedia(CONSULTA_ESTREITA).matches;
+}
 
 type Props = {
   demandasIniciais: Demanda[];
   resumoEditores: ResumoEditor[];
-  /** Server action que recarrega as demandas com filtros atuais. */
   buscarDemandas: (filtros: FiltrosListarDemandas) => Promise<Demanda[]>;
   revisaoInicial: number;
   podeCriar: boolean;
+  visao: 'lista' | 'quadro';
+  podeMover: boolean;
+  podeEntregar: boolean;
 };
 
 export function QuadroDemandas({
@@ -22,15 +43,28 @@ export function QuadroDemandas({
   buscarDemandas,
   revisaoInicial,
   podeCriar,
+  visao,
+  podeMover,
+  podeEntregar,
 }: Props) {
   const [demandas, setDemandas] = useState<Demanda[]>(demandasIniciais);
   const [filtros, setFiltros] = useState<FiltrosListarDemandas>({});
   const [busca, setBusca] = useState('');
   const [editorFiltro, setEditorFiltro] = useState('');
-  const [periodoinicio, setPeriodoInicio] = useState('');
+  const [periodoInicio, setPeriodoInicio] = useState('');
   const [periodoFim, setPeriodoFim] = useState('');
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const estreito = useSyncExternalStore(inscreverLargura, larguraEstreita, () => false);
   const revisaoRef = useRef(revisaoInicial);
   const [, startTransition] = useTransition();
+  const assinaturaServidor = demandasIniciais.map((d) => `${d.id}:${d.status}:${d.title}`).join('|');
+  const [assinaturaVista, setAssinaturaVista] = useState(assinaturaServidor);
+  const temFiltrosAtivos =
+    Boolean(busca || editorFiltro || periodoInicio || periodoFim);
+  if (assinaturaServidor !== assinaturaVista && !temFiltrosAtivos) {
+    setAssinaturaVista(assinaturaServidor);
+    setDemandas(demandasIniciais);
+  }
 
   const recarregar = useCallback(
     async (novosFiltros: FiltrosListarDemandas) => {
@@ -73,8 +107,8 @@ export function QuadroDemandas({
       busca: busca || undefined,
       editor_id: editorFiltro || undefined,
       periodo:
-        periodoinicio && periodoFim
-          ? { inicio: periodoinicio, fim: periodoFim }
+        periodoInicio && periodoFim
+          ? { inicio: periodoInicio, fim: periodoFim }
           : undefined,
     };
     setFiltros(novosFiltros);
@@ -90,161 +124,137 @@ export function QuadroDemandas({
     void recarregar({});
   }
 
-  const editoresUnicos = resumoEditores;
+  function camposAvancados(sufixo: string) {
+    return (
+      <>
+        {resumoEditores.length > 0 && (
+          <div className="space-y-1 flex-1 min-w-[150px]">
+            <Label htmlFor={`filtro-editor${sufixo}`}>Editor</Label>
+            <Select
+              value={editorFiltro || 'todos'}
+              onValueChange={(valor) => setEditorFiltro(valor === 'todos' ? '' : valor)}
+            >
+              <SelectTrigger id={`filtro-editor${sufixo}`}>
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {resumoEditores.map((e) => (
+                  <SelectItem key={e.editor_id} value={e.editor_id}>
+                    {e.editor_label ?? e.editor_nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <div className="space-y-1">
+          <Label htmlFor={`filtro-de${sufixo}`}>De</Label>
+          <Input
+            id={`filtro-de${sufixo}`}
+            type="date"
+            value={periodoInicio}
+            onChange={(e) => setPeriodoInicio(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`filtro-ate${sufixo}`}>Até</Label>
+          <Input
+            id={`filtro-ate${sufixo}`}
+            type="date"
+            value={periodoFim}
+            onChange={(e) => setPeriodoFim(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </>
+    );
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex min-w-0 flex-col gap-5">
+      <div className="flex gap-2" role="group" aria-label="Visão">
+        <Button asChild variant={visao === 'lista' ? 'default' : 'outline'} size="sm">
+          <Link href="/demandas">Lista</Link>
+        </Button>
+        <Button asChild variant={visao === 'quadro' ? 'default' : 'outline'} size="sm">
+          <Link href="/demandas?visao=quadro">Quadro</Link>
+        </Button>
+      </div>
       {/* Barra de filtros */}
-      <div
-        style={{
-          background: 'var(--superficie)',
-          border: '1px solid var(--borda-app)',
-          borderRadius: 'var(--raio-painel)',
-          padding: '14px 18px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 12,
-          alignItems: 'flex-end',
-        }}
-      >
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 200px' }}>
-          <span style={{ fontSize: '0.78rem', color: 'var(--texto-suave)', fontWeight: 500 }}>Buscar</span>
-          <input
+      <div className="rounded-[var(--raio-painel)] border border-[var(--borda-app)] bg-[var(--superficie)] p-4 flex flex-wrap gap-3 items-end">
+        <SlidersHorizontal className="h-4 w-4 text-[var(--texto-suave)] self-center mt-4" aria-hidden />
+
+        <div className="space-y-1 flex-1 min-w-[180px]">
+          <Label htmlFor="filtro-busca">Buscar</Label>
+          <Input
+            id="filtro-busca"
             type="search"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && aplicarFiltros()}
-            placeholder="Título..."
-            style={{
-              border: '1px solid var(--borda-app)',
-              borderRadius: 'var(--raio-input)',
-              padding: '7px 10px',
-              fontSize: '0.875rem',
-            }}
+            placeholder="Título…"
           />
-        </label>
+        </div>
 
-        {editoresUnicos.length > 0 && (
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 160px' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--texto-suave)', fontWeight: 500 }}>Editor</span>
-            <select
-              value={editorFiltro}
-              onChange={(e) => setEditorFiltro(e.target.value)}
-              style={{
-                border: '1px solid var(--borda-app)',
-                borderRadius: 'var(--raio-input)',
-                padding: '7px 10px',
-                fontSize: '0.875rem',
-                background: 'var(--superficie)',
-              }}
-            >
-              <option value="">Todos</option>
-              {editoresUnicos.map((e) => (
-                <option key={e.editor_id} value={e.editor_id}>
-                  {e.editor_label ?? e.editor_nome}
-                </option>
-              ))}
-            </select>
-          </label>
+        {!estreito && camposAvancados('')}
+
+        {estreito && (
+          <Sheet open={filtrosAbertos} onOpenChange={setFiltrosAbertos}>
+            <SheetTrigger asChild>
+              <Button type="button" variant="outline" size="sm">
+                Filtros
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="flex flex-col gap-4">
+              <SheetHeader>
+                <SheetTitle>Filtros</SheetTitle>
+              </SheetHeader>
+              {camposAvancados('-painel')}
+              <Button
+                type="button"
+                onClick={() => {
+                  aplicarFiltros();
+                  setFiltrosAbertos(false);
+                }}
+              >
+                Aplicar
+              </Button>
+            </SheetContent>
+          </Sheet>
         )}
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: '0.78rem', color: 'var(--texto-suave)', fontWeight: 500 }}>De</span>
-          <input
-            type="date"
-            value={periodoinicio}
-            onChange={(e) => setPeriodoInicio(e.target.value)}
-            style={{
-              border: '1px solid var(--borda-app)',
-              borderRadius: 'var(--raio-input)',
-              padding: '7px 10px',
-              fontSize: '0.875rem',
-            }}
-          />
-        </label>
-
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: '0.78rem', color: 'var(--texto-suave)', fontWeight: 500 }}>Até</span>
-          <input
-            type="date"
-            value={periodoFim}
-            onChange={(e) => setPeriodoFim(e.target.value)}
-            style={{
-              border: '1px solid var(--borda-app)',
-              borderRadius: 'var(--raio-input)',
-              padding: '7px 10px',
-              fontSize: '0.875rem',
-            }}
-          />
-        </label>
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            onClick={aplicarFiltros}
-            style={{
-              background: 'var(--loumar-700)',
-              color: 'var(--branco)',
-              border: 'none',
-              borderRadius: 'var(--raio-botao)',
-              padding: '8px 16px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-            }}
-          >
+        <div className="flex gap-2 self-end">
+          <Button type="button" onClick={aplicarFiltros} size="sm">
+            <Search className="h-3.5 w-3.5" aria-hidden />
             Filtrar
-          </button>
-          <button
-            type="button"
-            onClick={limparFiltros}
-            style={{
-              background: 'transparent',
-              color: 'var(--texto-suave)',
-              border: '1px solid var(--borda-app)',
-              borderRadius: 'var(--raio-botao-neutro)',
-              padding: '8px 14px',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-            }}
-          >
+          </Button>
+          <Button type="button" variant="outline" onClick={limparFiltros} size="sm" disabled={!temFiltrosAtivos}>
+            <X className="h-3.5 w-3.5" aria-hidden />
             Limpar
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Resumo por Editor */}
-      {editoresUnicos.length > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 10,
-            background: 'var(--tabela-cabecalho-fundo)',
-            borderRadius: 'var(--raio-card)',
-            padding: '12px 16px',
-            border: '1px solid var(--tabela-cabecalho-borda)',
-          }}
-        >
-          {editoresUnicos.map((e) => (
+      {resumoEditores.length > 0 && (
+        <div className="flex flex-wrap gap-2.5 rounded-[var(--raio-card)] border border-[var(--tabela-cabecalho-borda)] bg-[var(--tabela-cabecalho-fundo)] p-3">
+          {resumoEditores.map((e) => (
             <div
               key={e.editor_id}
-              style={{
-                fontSize: '0.8rem',
-                background: 'var(--superficie)',
-                borderRadius: 'var(--raio-card)',
-                padding: '8px 12px',
-                border: '1px solid var(--borda-app)',
-              }}
+              className="rounded-[var(--raio-card)] border border-[var(--borda-app)] bg-[var(--superficie)] px-3 py-2 text-xs"
             >
-              <div style={{ fontWeight: 700, color: 'var(--texto-forte)' }}>
+              <div className="font-semibold text-[var(--texto-forte)]">
                 {e.editor_label ?? e.editor_nome}
               </div>
-              <div style={{ color: 'var(--texto-suave)', marginTop: 2 }}>
-                {e.total} total · {e.em_execucao} em exec. · {e.concluidas} conc.
+              <div className="text-[var(--texto-suave)] mt-0.5">
+                <span className="fonte-numero">{e.total}</span> total ·{' '}
+                <span className="fonte-numero">{e.em_execucao}</span> em exec. ·{' '}
+                <span className="fonte-numero">{e.concluidas}</span> conc.
                 {e.atrasadas > 0 && (
-                  <span style={{ color: 'var(--alerta-atrasada)', fontWeight: 600 }}>
-                    {' '}· {e.atrasadas} atras.
+                  <span className="text-[var(--alerta-atrasada)] font-semibold">
+                    {' '}· <span className="fonte-numero">{e.atrasadas}</span> atras.
                   </span>
                 )}
               </div>
@@ -253,39 +263,44 @@ export function QuadroDemandas({
         </div>
       )}
 
-      {/* Lista de Demandas */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {visao === 'quadro' ? (
+        demandas.length === 0 ? (
+          <EstadoVazio
+            icone={FileText}
+            titulo="Nenhuma demanda encontrada"
+            descricao={temFiltrosAtivos ? 'Tente remover os filtros.' : undefined}
+          />
+        ) : (
+          <QuadroKanban
+            demandas={demandas}
+            podeMover={podeMover}
+            podeEntregar={podeEntregar}
+            aoAtualizar={() => void recarregar(filtros)}
+          />
+        )
+      ) : (
+      <div className="flex flex-col gap-2.5">
         {demandas.length === 0 ? (
-          <div
-            style={{
-              textAlign: 'center',
-              color: 'var(--texto-suave)',
-              padding: '40px 20px',
-              background: 'var(--superficie)',
-              borderRadius: 'var(--raio-card)',
-              border: '1px solid var(--borda-app)',
-            }}
-          >
-            Nenhuma demanda encontrada.
-            {podeCriar && (
-              <div style={{ marginTop: 12 }}>
-                <Link
-                  href="/demandas/nova"
-                  style={{
-                    color: 'var(--loumar-700)',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                  }}
-                >
-                  + Criar demanda
-                </Link>
-              </div>
-            )}
-          </div>
+          <EstadoVazio
+            icone={FileText}
+            titulo="Nenhuma demanda encontrada"
+            descricao={temFiltrosAtivos ? 'Tente remover os filtros.' : undefined}
+            acao={
+              podeCriar ? (
+                <Button asChild size="sm">
+                  <Link href="/demandas/nova">
+                    <Plus className="h-3.5 w-3.5" aria-hidden />
+                    Criar demanda
+                  </Link>
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           demandas.map((d) => <CardDemanda key={d.id} demanda={d} />)
         )}
       </div>
+      )}
     </div>
   );
 }

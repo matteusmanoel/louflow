@@ -1,7 +1,12 @@
 'use client';
 
 import { useActionState } from 'react';
-import { Campo, Botao, Aviso } from '@/components/ui';
+import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import type { Resultado } from '@/lib/action';
 import type { FichaTecnica } from '../consultas';
 import { salvarFichaTecnica } from '../actions';
@@ -40,113 +45,87 @@ export function FormFichaTecnica({ demandaId, ficha }: Props) {
   const [estado, dispatch, pendente] = useActionState(acao, null);
 
   return (
-    <form action={dispatch} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form action={dispatch} className="flex flex-col gap-4">
       {estado && (
-        <Aviso tipo={estado.ok ? 'aviso' : 'erro'}>{estado.mensagem}</Aviso>
+        <Alert variant={estado.ok ? 'info' : 'destructive'}>
+          <AlertDescription>{estado.mensagem}</AlertDescription>
+        </Alert>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <Campo
-          rotulo="Formato"
-          id="formato"
-          name="formato"
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="formato">Formato</Label>
+          <Input
+            id="formato"
+            name="formato"
+            type="text"
+            maxLength={100}
+            required
+            defaultValue={ficha?.formato ?? ''}
+            placeholder="Ex.: Reels, YouTube, TikTok"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="duracaoSegundos">Duração (segundos)</Label>
+          <Input
+            id="duracaoSegundos"
+            name="duracaoSegundos"
+            type="number"
+            min={1}
+            required
+            defaultValue={ficha?.duracaoSegundos ?? ''}
+            placeholder="Ex.: 60"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="plataformas">Plataformas (separadas por vírgula)</Label>
+        <Input
+          id="plataformas"
+          name="plataformas"
           type="text"
-          maxLength={100}
           required
-          defaultValue={ficha?.formato ?? ''}
-          placeholder="Ex.: Reels, YouTube, TikTok"
-        />
-        <Campo
-          rotulo="Duração (segundos)"
-          id="duracaoSegundos"
-          name="duracaoSegundos"
-          type="number"
-          min={1}
-          required
-          defaultValue={ficha?.duracaoSegundos ?? ''}
-          placeholder="Ex.: 60"
+          defaultValue={ficha?.plataformas.join(', ') ?? ''}
+          placeholder="Ex.: Instagram, TikTok, YouTube"
         />
       </div>
 
-      <Campo
-        rotulo="Plataformas (separadas por vírgula)"
-        id="plataformas"
-        name="plataformas"
-        type="text"
-        required
-        defaultValue={ficha?.plataformas.join(', ') ?? ''}
-        placeholder="Ex.: Instagram, TikTok, YouTube"
-      />
-
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            color: 'var(--texto-suave)',
-          }}
-        >
-          Briefing
-        </span>
-        <textarea
-          name="briefing"
+      <div className="space-y-1.5">
+        <Label htmlFor="briefing">Briefing</Label>
+        <Textarea
           id="briefing"
+          name="briefing"
           required
           rows={5}
           maxLength={5000}
           defaultValue={ficha?.briefing ?? ''}
           placeholder="Descreva o briefing da produção…"
-          style={{
-            borderRadius: 'var(--raio-input)',
-            border: '1px solid var(--borda-app)',
-            background: 'var(--superficie)',
-            padding: '10px 14px',
-            fontSize: 14,
-            color: 'var(--texto-forte)',
-            resize: 'vertical',
-            minHeight: 100,
-          }}
+          className="resize-y min-h-[100px]"
         />
-      </label>
+      </div>
 
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            color: 'var(--texto-suave)',
-          }}
-        >
-          Observações Técnicas <span style={{ fontWeight: 400, color: 'var(--texto-suave)' }}>(opcional)</span>
-        </span>
-        <textarea
-          name="observacoesTecnicas"
+      <div className="space-y-1.5">
+        <Label htmlFor="observacoesTecnicas">
+          Observações Técnicas{' '}
+          <span className="text-[var(--texto-suave)] font-normal">(opcional)</span>
+        </Label>
+        <Textarea
           id="observacoesTecnicas"
+          name="observacoesTecnicas"
           rows={3}
           maxLength={2000}
           defaultValue={ficha?.observacoesTecnicas ?? ''}
           placeholder="Observações adicionais para a equipe técnica…"
-          style={{
-            borderRadius: 'var(--raio-input)',
-            border: '1px solid var(--borda-app)',
-            background: 'var(--superficie)',
-            padding: '10px 14px',
-            fontSize: 14,
-            color: 'var(--texto-forte)',
-            resize: 'vertical',
-            minHeight: 72,
-          }}
+          className="resize-y min-h-[72px]"
         />
-      </label>
+      </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Botao type="submit" disabled={pendente}>
+      <div className="flex justify-end">
+        <Button type="submit" disabled={pendente}>
+          {pendente && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
           {pendente ? 'Salvando…' : 'Salvar Ficha Técnica'}
-        </Botao>
+        </Button>
       </div>
     </form>
   );

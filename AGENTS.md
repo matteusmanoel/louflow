@@ -97,3 +97,13 @@ Testes cobrem o comportamento público da fatia (Server Actions e consultas cont
 O sistema antigo (Apps Script) fica **fora do repositório**, apenas na máquina local, somente leitura:
 `/Users/matteusmanoel/Projects/Loumar/louflow/demandas-edits/` (código `.js`/`.html`).
 Use para conferir regras de negócio. Nunca copie dados, nunca faça commit desse diretório nem de planilhas (`*.xlsx`), e nunca reproduza nomes de pessoas no código. Se o legado conflitar com o PRD, o PRD vence.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

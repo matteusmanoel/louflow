@@ -2,27 +2,28 @@ import { exigirModulo } from '@/lib/auth';
 import { listarCortes } from '@/features/cortes/consultas';
 import { ListaCortes } from '@/features/cortes/components/ListaCortes';
 import { FormCriarCorte } from '@/features/cortes/components/FormCriarCorte';
-import { Cartao, Titulo } from '@/components/ui';
+import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
+import { Card, CardContent } from '@/components/ui/card';
+import { ContainerPagina } from '@/components/ui/container-pagina';
 
 export default async function PaginaCortes() {
   const usuario = await exigirModulo('cortes');
   const cortes = await listarCortes();
-
   const podeGerenciar = usuario.permissoes.editorPadraoCortes;
 
   return (
-    <main style={{ padding: 'var(--conteudo-padding)', display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <Titulo>Cortes</Titulo>
+    <ContainerPagina>
+      <CabecalhoPagina grupo="Produção" titulo="Cortes" />
 
       {podeGerenciar && (
-        <Cartao>
-          <FormCriarCorte />
-        </Cartao>
+        <Card>
+          <CardContent className="p-6">
+            <FormCriarCorte />
+          </CardContent>
+        </Card>
       )}
 
-      <Cartao>
-        <ListaCortes cortes={cortes} />
-      </Cartao>
-    </main>
+      <ListaCortes cortes={cortes} podeConcluir={podeGerenciar} />
+    </ContainerPagina>
   );
 }

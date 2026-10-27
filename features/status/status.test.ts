@@ -1,8 +1,54 @@
 import { describe, expect, it } from 'vitest';
+import { executarAcao, MENSAGEM_SEM_PERMISSAO } from '@/lib/action';
+import type { Permissoes } from '@/lib/permissions';
+import type { UsuarioSessao } from '@/lib/session';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
 import { TRANSICOES, transicionarStatus, type DemandaStatus } from './index';
+import { defAlterarStatus } from './acoes-def';
 
 usarBancoLimpo();
+
+const PERMISSOES_VAZIAS: Permissoes = {
+  criarDemandas: false,
+  definirOutroEditor: false,
+  verTodasDemandas: false,
+  editarDemandas: false,
+  atribuirEditor: false,
+  alterarStatus: false,
+  alterarPrioridade: false,
+  excluirDemandas: false,
+  enviarFicha: false,
+  verAgenda: false,
+  gerenciarAgenda: false,
+  verCaptacoes: false,
+  gerenciarCaptacoes: false,
+  acessarCortes: false,
+  verAbaCortes: false,
+  verRelatorios: false,
+  usarAnalista: false,
+  gerenciarUsuarios: false,
+  verLixeira: false,
+  verSorteios: false,
+  operarDrone: false,
+  editorPadraoCortes: false,
+  notaInformativaRanking: false,
+};
+
+function sessao(id: string, perm: Partial<Permissoes> = {}): UsuarioSessao {
+  return {
+    id,
+    nome: 'Teste',
+    perfil: 'Editor',
+    editorLabel: null,
+    deveTrocarPin: false,
+    permissoes: { ...PERMISSOES_VAZIAS, ...perm },
+    ehAprovadorDelegado: false,
+  };
+}
+
+function deps(usuario: UsuarioSessao) {
+  return { obterUsuario: async () => usuario, sql: () => sqlTeste() };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -154,5 +200,63 @@ describe('transicionarStatus', () => {
     const [dem] = await sql<{ completed_at: Date | null }[]>`
       SELECT completed_at FROM demands WHERE id = ${demandaId}`;
     expect(dem?.completed_at).not.toBeNull();
+  });
+});
+
+describe('alterarStatusDemanda', () => {
+  it('realiza transição válida pela ação', async () => {
+    const { id: userId } = await criarUsuario();
+    const demandaId = await criarDemanda('Não iniciada');
+
+    const res = await executarAcao(
+      defAlterarStatus,
+      { demandaId, novoStatus: 'Em execução' },
+      deps(sessao(userId, { alterarStatus: true })),
+    );
+
+    expect(res.ok).toBe(true);
+    const [dem] = await sqlTeste()<{ status: string }[]>`SELECT status FROM demands WHERE id = ${demandaId}`;
+    expect(dem?.status).toBe('Em execução');
+  });
+
+  it('rejeita transição inválida', async () => {
+    const { id: userId } = await criarUsuario();
+    const demandaId = await criarDemanda('Não iniciada');
+
+    const res = await executarAcao(
+      defAlterarStatus,
+      { demandaId, novoStatus: 'Concluída' },
+      deps(sessao(userId, { alterarStatus: true })),
+    );
+
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.mensagem).toMatch(/Transição inválida/);
+  });
+
+  it('nega quem não tem permissão', async () => {
+    const { id: userId } = await criarUsuario();
+    const demandaId = await criarDemanda('Não iniciada');
+
+    const res = await executarAcao(
+      defAlterarStatus,
+      { demandaId, novoStatus: 'Em execução' },
+      deps(sessao(userId)),
+    );
+
+    expect(res).toEqual({ ok: false, mensagem: MENSAGEM_SEM_PERMISSAO });
+  });
+
+  it('exige motivo para cancelar', async () => {
+    const { id: userId } = await criarUsuario();
+    const demandaId = await criarDemanda('Em execução');
+
+    const res = await executarAcao(
+      defAlterarStatus,
+      { demandaId, novoStatus: 'Cancelada' },
+      deps(sessao(userId, { alterarStatus: true })),
+    );
+
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.mensagem).toMatch(/motivo/);
   });
 });

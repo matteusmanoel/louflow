@@ -3,7 +3,7 @@ import { executarAcao } from '@/lib/action';
 import type { Permissoes } from '@/lib/permissions';
 import type { UsuarioSessao } from '@/lib/session';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
-import { defRegistrarEntrega, defAprovarEntrega, defReprovarEntrega } from './actions';
+import { defRegistrarEntrega, defAprovarEntrega, defReprovarEntrega } from './_acoes-def';
 import { listarAprovacoes, listarEntregasDemanda } from './consultas';
 
 usarBancoLimpo();
@@ -35,6 +35,7 @@ const PERMISSOES_VAZIAS: Permissoes = {
   verSorteios: false,
   operarDrone: false,
   editorPadraoCortes: false,
+  notaInformativaRanking: false,
 };
 
 function sessao(id: string, perm: Partial<Permissoes> = {}): UsuarioSessao {

@@ -1,9 +1,10 @@
 import { notFound, redirect } from 'next/navigation';
 import { exigirModulo } from '@/lib/auth';
-import { Titulo, Cartao } from '@/components/ui';
 import { obterCaptacaoDb, listarVideomakersDb } from '@/features/captacoes/consultas';
-import { FormularioCaptacao, BotaoCancelarCaptacao } from '@/features/captacoes/components/FormularioCaptacao';
+import { FormularioCaptacao } from '@/features/captacoes/components/FormularioCaptacao';
 import { BadgeStatusCaptacao } from '@/features/captacoes/components/BadgeStatusCaptacao';
+import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
+import { ContainerPagina } from '@/components/ui/container-pagina';
 
 export default async function PaginaCaptacao({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,26 +15,19 @@ export default async function PaginaCaptacao({ params }: { params: Promise<{ id:
   if (!captacao) notFound();
 
   return (
-    <main style={{ padding: '24px', maxWidth: 640, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <Titulo sobre="Captações">Editar Captação</Titulo>
-        <BadgeStatusCaptacao status={captacao.status} />
-      </div>
-
-      <Cartao>
-        {captacao.status === 'Agendada' ? (
-          <>
-            <FormularioCaptacao videomakers={videomakers} captacao={captacao} />
-            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--borda-app)' }}>
-              <BotaoCancelarCaptacao id={captacao.id} />
-            </div>
-          </>
-        ) : (
-          <p style={{ color: 'var(--texto-suave)' }}>
-            Esta Captação não pode ser editada (status: {captacao.status}).
-          </p>
-        )}
-      </Cartao>
-    </main>
+    <ContainerPagina largura="formulario">
+      <CabecalhoPagina
+        grupo="Recursos"
+        titulo="Editar Captação"
+        extra={<BadgeStatusCaptacao status={captacao.status} />}
+      />
+      {captacao.status === 'Agendada' ? (
+        <FormularioCaptacao videomakers={videomakers} captacao={captacao} />
+      ) : (
+        <p className="text-sm text-[var(--texto-suave)]">
+          Esta Captação não pode ser editada (status: {captacao.status}).
+        </p>
+      )}
+    </ContainerPagina>
   );
 }

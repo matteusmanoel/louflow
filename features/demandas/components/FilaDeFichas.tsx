@@ -2,9 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
+import { CalendarDays, User, Loader2, InboxIcon } from 'lucide-react';
 import type { Demanda } from '../consultas';
 import { assumirFicha } from '../actions';
 import { BadgePrioridade } from './BadgePrioridade';
+import { Button } from '@/components/ui/button';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { mostrarFeedback } from '@/lib/toast';
 
 function formatarData(valor: string | null): string {
   if (!valor) return '—';
@@ -19,80 +23,60 @@ export function FilaDeFichas({ demandas }: { demandas: Demanda[] }) {
   async function handleAssumir(demandaId: string) {
     startTransition(async () => {
       const resultado = await assumirFicha({ demandaId });
+      mostrarFeedback(resultado);
       if (resultado.ok) {
         router.refresh();
-      } else {
-        alert(resultado.mensagem);
       }
     });
   }
 
   if (demandas.length === 0) {
     return (
-      <div
-        style={{
-          textAlign: 'center',
-          color: 'var(--texto-suave)',
-          padding: '40px 20px',
-          background: 'var(--superficie)',
-          borderRadius: 'var(--raio-card)',
-          border: '1px solid var(--borda-app)',
-        }}
-      >
-        A Fila de Fichas está vazia. Nenhuma demanda aguarda Editor.
-      </div>
+      <EstadoVazio
+        icone={InboxIcon}
+        titulo="Fila de Fichas vazia"
+        descricao="Nenhuma demanda aguarda Editor no momento."
+      />
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
       {demandas.map((d) => (
         <article
           key={d.id}
-          style={{
-            background: 'var(--superficie)',
-            border: '1px solid var(--borda-app)',
-            borderRadius: 'var(--raio-card)',
-            boxShadow: 'var(--sombra-card)',
-            padding: '14px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            flexWrap: 'wrap',
-          }}
+          className="flex items-center gap-4 flex-wrap rounded-[var(--raio-card)] border border-[var(--borda-app)] bg-[var(--superficie)] shadow-[var(--sombra-card)] p-4"
         >
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--texto-forte)' }}>
-              {d.title}
-            </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--texto-suave)', marginTop: 4, display: 'flex', gap: 12 }}>
+          <div className="flex-1 min-w-[200px]">
+            <div className="fonte-titulo font-semibold text-sm text-[var(--texto-forte)]">{d.title}</div>
+            <div className="flex gap-3 text-[11px] text-[var(--texto-suave)] mt-1 flex-wrap">
               <span>{d.format}</span>
-              {d.influencer_nome && <span>👤 {d.influencer_nome}</span>}
-              {d.prazo_efetivo && <span>📅 {formatarData(d.prazo_efetivo)}</span>}
+              {d.influencer_nome && (
+                <span className="flex items-center gap-1">
+                  <User className="h-3 w-3" aria-hidden />
+                  {d.influencer_nome}
+                </span>
+              )}
+              {d.prazo_efetivo && (
+                <span className="flex items-center gap-1">
+                  <CalendarDays className="h-3 w-3" aria-hidden />
+                  <span className="fonte-numero">{formatarData(d.prazo_efetivo)}</span>
+                </span>
+              )}
             </div>
           </div>
 
           <BadgePrioridade prioridade={d.priority} />
 
-          <button
+          <Button
             type="button"
             onClick={() => void handleAssumir(d.id)}
             disabled={isPending}
-            style={{
-              background: 'var(--loumar-700)',
-              color: 'var(--branco)',
-              border: 'none',
-              borderRadius: 'var(--raio-botao)',
-              padding: '8px 18px',
-              fontWeight: 600,
-              cursor: isPending ? 'not-allowed' : 'pointer',
-              opacity: isPending ? 0.7 : 1,
-              fontSize: '0.875rem',
-              boxShadow: 'var(--sombra-botao)',
-            }}
+            size="sm"
           >
+            {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
             Assumir
-          </button>
+          </Button>
         </article>
       ))}
     </div>

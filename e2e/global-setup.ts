@@ -9,12 +9,9 @@ import { createHmac, createHash, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postgres from 'postgres';
+import { AUTH_FILE, AUTH_INFLUENCER, AUTH_PREMIOS, E2E_ADMIN_EMAIL, E2E_ADMIN_NAME, E2E_ADMIN_PIN, PERFIS_EXTRA } from './contas';
 
-/* ── Constantes do usuário de teste ──────────────────────────────────────── */
-export const E2E_ADMIN_EMAIL = 'e2e-admin@exemplo.test';
-export const E2E_ADMIN_PIN = '482916';
-export const E2E_ADMIN_NAME = 'E2E Admin';
-export const AUTH_FILE = 'e2e/.auth/admin.json';
+export { AUTH_FILE, E2E_ADMIN_EMAIL, E2E_ADMIN_PIN, E2E_ADMIN_NAME };
 
 /* ── Auxiliares (replicam lib/pin.ts e lib/crypto.ts sem server-only) ───── */
 function carregarEnv(): Record<string, string> {
@@ -28,6 +25,19 @@ function carregarEnv(): Record<string, string> {
     return env;
   } catch {
     return {};
+  }
+}
+
+function estadoVazio() {
+  return JSON.stringify({ cookies: [], origins: [] });
+}
+
+async function garantirArquivosAuth(conteudo: string) {
+  const fs = await import('node:fs');
+  const dir = resolve(process.cwd(), 'e2e/.auth');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  for (const arquivo of [AUTH_FILE, AUTH_INFLUENCER, AUTH_PREMIOS]) {
+    fs.writeFileSync(resolve(process.cwd(), arquivo), conteudo);
   }
 }
 
@@ -50,13 +60,7 @@ setup('autenticar usuário de teste', async ({ page }) => {
   if (process.env.SKIP_E2E) {
     console.log('[E2E] SKIP_E2E definido — pulando setup de autenticação.');
     // Cria arquivo de estado vazio para não quebrar os testes dependentes
-    const fs = await import('node:fs');
-    const dir = resolve(process.cwd(), 'e2e/.auth');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(
-      resolve(process.cwd(), AUTH_FILE),
-      JSON.stringify({ cookies: [], origins: [] }),
-    );
+    await garantirArquivosAuth(estadoVazio());
     return;
   }
 
@@ -65,11 +69,7 @@ setup('autenticar usuário de teste', async ({ page }) => {
 
   if (!dbUrl) {
     console.warn('[E2E] DATABASE_URL não encontrada — setup pulado, testes de auth falharão.');
-    const fs = await import('node:fs');
-    fs.writeFileSync(
-      resolve(process.cwd(), AUTH_FILE),
-      JSON.stringify({ cookies: [], origins: [] }),
-    );
+    await garantirArquivosAuth(estadoVazio());
     return;
   }
 
@@ -127,6 +127,41 @@ setup('autenticar usuário de teste', async ({ page }) => {
     await expect(page).toHaveURL(/\/(demandas|dashboard|sem-acesso)/, { timeout: 15_000 });
 
     await page.context().storageState({ path: AUTH_FILE });
+
+    const fs = await import('node:fs');
+    const host = urlObj.hostname;
+    for (const extra of PERFIS_EXTRA) {
+      await sql`DELETE FROM users WHERE email = ${extra.email}`;
+      const pinHash = await gerarHashPin(E2E_ADMIN_PIN, pepper);
+      const [criado] = await sql<{ id: string; access_version: number }[]>`
+        INSERT INTO users (email, name, profile, pin_hash, must_reset_pin, is_active)
+        VALUES (${extra.email}, ${extra.nome}, ${extra.perfil}, ${pinHash}, false, true)
+        RETURNING id, access_version`;
+      if (!criado) throw new Error(`[E2E] Falha ao criar ${extra.email}`);
+      const tokenExtra = tokenAleatorio();
+      await sql`
+        INSERT INTO session_tokens (token_digest, user_id, access_version, expires_at)
+        VALUES (${digestToken(tokenExtra)}, ${criado.id}, ${criado.access_version}, ${expiresAt})`;
+      fs.writeFileSync(
+        resolve(process.cwd(), extra.arquivo),
+        JSON.stringify({
+          cookies: [
+            {
+              name: 'lf_sessao',
+              value: tokenExtra,
+              domain: host,
+              path: '/',
+              expires: Math.floor(expiresAt.getTime() / 1000),
+              httpOnly: true,
+              secure: false,
+              sameSite: 'Lax',
+            },
+          ],
+          origins: [],
+        }),
+      );
+    }
+
     console.log(`[E2E] Setup concluído — usuário: ${E2E_ADMIN_EMAIL}`);
   } finally {
     await sql.end();

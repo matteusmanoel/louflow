@@ -1,6 +1,6 @@
 /**
- * S1-09 (#11564): Layout exclusivo do Painel de TV — sem shell da aplicação principal,
- * sem autenticação. Importa tokens visuais próprios (docs/design-tokens.md §6).
+ * S1-09 (#11564): casca do Painel de TV. O <html> fica no layout raiz;
+ * esta rota só cobre a viewport com a identidade própria de tv.css.
  */
 import type { ReactNode } from 'react';
 import './tv.css';
@@ -12,20 +12,5 @@ export const metadata = {
 };
 
 export default function LayoutTv({ children }: { children: ReactNode }) {
-  return (
-    <html lang="pt-BR">
-      <body
-        style={{
-          margin: 0,
-          padding: 0,
-          background: 'var(--tv-fundo)',
-          color: 'var(--tv-texto-forte)',
-          fontFamily: 'var(--tv-fonte)',
-          minHeight: '100vh',
-        }}
-      >
-        {children}
-      </body>
-    </html>
-  );
+  return <div className="painel-tv">{children}</div>;
 }

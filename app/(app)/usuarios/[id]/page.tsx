@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
 import { exigirModulo } from '@/lib/auth';
-import { Titulo } from '@/components/ui';
 import { buscarUsuario } from '@/features/usuarios/consultas';
 import { DetalheUsuarioCliente } from '@/features/usuarios/components/DetalheUsuarioCliente';
+import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
+import { ContainerPagina } from '@/components/ui/container-pagina';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -14,9 +15,9 @@ export default async function PaginaDetalheUsuario({ params }: Props) {
   if (!usuario) notFound();
 
   return (
-    <main>
-      <Titulo sobre="Usuários">{usuario.nome}</Titulo>
+    <ContainerPagina largura="formulario">
+      <CabecalhoPagina grupo="Administração" titulo={usuario.nome} />
       <DetalheUsuarioCliente usuario={usuario} />
-    </main>
+    </ContainerPagina>
   );
 }

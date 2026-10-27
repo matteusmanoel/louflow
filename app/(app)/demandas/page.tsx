@@ -1,5 +1,9 @@
 import Link from 'next/link';
+import { Plus } from 'lucide-react';
 import { exigirModulo } from '@/lib/auth';
+import { modulo } from '@/lib/modules';
+import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
+import { ContainerPagina } from '@/components/ui/container-pagina';
 import {
   carregarDemandasPagina,
   carregarResumoPorEditorPagina,
@@ -7,12 +11,15 @@ import {
   type FiltrosListarDemandas,
 } from '@/features/demandas/consultas';
 import { QuadroDemandas } from '@/features/demandas/components/QuadroDemandas';
-import { Titulo } from '@/components/ui';
+import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PaginaDemandas() {
+type Props = { searchParams: Promise<{ visao?: string }> };
+
+export default async function PaginaDemandas({ searchParams }: Props) {
   const usuario = await exigirModulo('demandas');
+  const { visao } = await searchParams;
 
   const [demandas, resumo, revisao] = await Promise.all([
     carregarDemandasPagina(usuario),
@@ -20,7 +27,6 @@ export default async function PaginaDemandas() {
     carregarRevisaoPagina(),
   ]);
 
-  /** Server action que recarrega as demandas com filtros (consumida pelo QuadroDemandas). */
   async function buscarDemandasAction(filtros: FiltrosListarDemandas) {
     'use server';
     const { obterSessao } = await import('@/lib/auth');
@@ -30,29 +36,36 @@ export default async function PaginaDemandas() {
     return buscar(u, filtros);
   }
 
+  const atalhos = [
+    modulo('pendencias')?.permitido(usuario) ? { href: '/pendencias', rotulo: 'Ver pendências' } : null,
+    modulo('agenda')?.permitido(usuario) ? { href: '/agenda', rotulo: 'Ver agenda' } : null,
+  ].filter((item): item is { href: string; rotulo: string } => item != null);
+
   return (
-    <main style={{ padding: 'var(--conteudo-padding)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <Titulo sobre="Produção">Demandas</Titulo>
-        {usuario.permissoes.criarDemandas && (
-          <Link
-            href="/demandas/nova"
-            style={{
-              background: 'var(--loumar-700)',
-              color: 'var(--branco)',
-              padding: '9px 18px',
-              borderRadius: 'var(--raio-botao)',
-              textDecoration: 'none',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              boxShadow: 'var(--sombra-botao)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            + Nova demanda
-          </Link>
-        )}
-      </div>
+    <ContainerPagina>
+      <CabecalhoPagina
+        grupo="Produção"
+        titulo="Demandas"
+        acao={
+          usuario.permissoes.criarDemandas ? (
+            <Button asChild>
+              <Link href="/demandas/nova">
+                <Plus className="h-4 w-4" aria-hidden />
+                Nova demanda
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      />
+      {atalhos.length > 0 && (
+        <nav aria-label="Atalhos" className="-mt-2 flex gap-4 text-sm">
+          {atalhos.map((atalho) => (
+            <Link key={atalho.href} href={atalho.href} className="font-medium text-[var(--loumar-700)]">
+              {atalho.rotulo}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       <QuadroDemandas
         demandasIniciais={demandas}
@@ -60,7 +73,10 @@ export default async function PaginaDemandas() {
         buscarDemandas={buscarDemandasAction}
         revisaoInicial={revisao}
         podeCriar={usuario.permissoes.criarDemandas}
+        visao={visao === 'quadro' ? 'quadro' : 'lista'}
+        podeMover={usuario.permissoes.alterarStatus}
+        podeEntregar={usuario.permissoes.editarDemandas}
       />
-    </main>
+    </ContainerPagina>
   );
 }

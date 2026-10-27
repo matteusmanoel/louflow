@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Botao, Aviso, Cartao, Titulo } from '@/components/ui';
+import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { RodapeAcoes } from '@/components/ui/rodape-acoes';
 import { salvarPreferencias } from '../actions';
 import type { PreferenciasNotificacao } from '../consultas';
 import type { Resultado } from '@/lib/action';
@@ -38,67 +42,46 @@ export function FormularioPreferencias({ preferencias }: Props) {
   }
 
   return (
-    <Cartao>
-      <Titulo sobre="Conta">Preferências de Notificação</Titulo>
-      <p style={{ color: 'var(--texto-suave)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-        Escolha quais eventos você deseja receber por e-mail.
-      </p>
+    <Card>
+      <CardContent className="pt-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {resultado && !resultado.ok && (
+            <Alert variant="destructive">
+              <AlertDescription>{resultado.mensagem}</AlertDescription>
+            </Alert>
+          )}
+          {resultado?.ok && (
+            <Alert variant="info">
+              <AlertDescription>{resultado.mensagem}</AlertDescription>
+            </Alert>
+          )}
 
-      <form onSubmit={handleSubmit}>
-        <ul
-          style={{
-            listStyle: 'none',
-            padding: 0,
-            margin: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-          }}
-        >
-          {(Object.keys(ROTULOS) as (keyof PreferenciasNotificacao)[]).map((chave) => (
-            <li key={chave}>
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  padding: '0.625rem 0.75rem',
-                  borderRadius: '0.375rem',
-                  border: '1px solid var(--borda-app)',
-                  background: 'var(--superficie)',
-                  minWidth: 0,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  name={chave}
-                  defaultChecked={preferencias[chave]}
-                  style={{ accentColor: 'var(--loumar-600)', width: '1.125rem', height: '1.125rem', flexShrink: 0 }}
-                />
-                <span style={{ color: 'var(--texto-forte)', fontSize: '0.9375rem' }}>{ROTULOS[chave]}</span>
-              </label>
-            </li>
-          ))}
-        </ul>
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {(Object.keys(ROTULOS) as (keyof PreferenciasNotificacao)[]).map((chave) => (
+              <li key={chave}>
+                <label className="flex cursor-pointer items-center gap-3 rounded-[var(--raio-input)] border border-[var(--borda-app)] bg-[var(--superficie)] px-3 py-2.5 transition-colors hover:border-[var(--loumar-600)]">
+                  <input
+                    type="checkbox"
+                    name={chave}
+                    defaultChecked={preferencias[chave]}
+                    className="size-4 shrink-0 border border-[var(--borda-app)] accent-[var(--loumar-600)]"
+                  />
+                  <span className="text-sm text-[var(--texto-forte)]">{ROTULOS[chave]}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
 
-        <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Botao type="submit" disabled={pendente}>
-            {pendente ? 'Salvando…' : 'Salvar preferências'}
-          </Botao>
-        </div>
-
-        {resultado && !resultado.ok && (
-          <Aviso tipo="erro">
-            {resultado.mensagem}
-          </Aviso>
-        )}
-        {resultado?.ok && (
-          <Aviso>
-            {resultado.mensagem}
-          </Aviso>
-        )}
-      </form>
-    </Cartao>
+          <RodapeAcoes
+            primaria={
+              <Button type="submit" disabled={pendente} className="w-full sm:w-auto">
+                {pendente && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+                {pendente ? 'Salvando…' : 'Salvar preferências'}
+              </Button>
+            }
+          />
+        </form>
+      </CardContent>
+    </Card>
   );
 }

@@ -10,7 +10,7 @@
 |---|---|---|
 | Base original: azul `#101fe8`, cinzas Google, Arial | 1 a ~2380 | **Legado.** Continuam valendo apenas os badges de Prioridade e os estados de linha (§3.3), que nenhuma camada posterior sobrescreve |
 | "Tema iOS / Liquid Glass": `--ios-*`, vidro com `backdrop-filter` | ~2382 a ~3676 | **Legado.** Sobrescrita pela identidade Loumar. Não portar |
-| **"Identidade Loumar"**: `--loumar-*`, Arial, menu lateral | ~3677 (escuro) e ~4393 em diante | **Vigente.** Fonte destes tokens |
+| **"Identidade Loumar"**: `--loumar-*`, menu lateral | ~3677 (escuro) e ~4393 em diante | **Vigente.** Cores e layout destes tokens. Tipografia atual: Inter, Manrope e Fraunces (§4) |
 
 ## 1. Cores — interface principal
 
@@ -53,41 +53,44 @@ No tema escuro, o fundo da página leva dois halos radiais da marca, `rgba(11,14
 
 ## 2. Tema escuro
 
-- Comportamento atual: um botão alterna o tema, e a preferência fica salva no navegador, chave `louFlowTema` = `claro` | `escuro`. O tema se aplica como `data-tema` em `<html>`.
-- O padrão é **claro**. O sistema **não** segue `prefers-color-scheme` hoje, e isso deve ser preservado.
+- Preferência salva no navegador, chave `louFlowTema` = `claro` | `escuro` | `sistema`. O script de `app/layout.tsx` grava `data-tema="claro"` ou `data-tema="escuro"` em `<html>` antes da pintura.
+- O padrão, sem nada salvo, é **escuro**. `sistema` segue `prefers-color-scheme` em tempo real.
+- Todo token de cor tem valor nos dois temas. Os semânticos abaixo (prioridade, chip, linha) também.
 - Na impressão, o tema escuro é forçado para claro.
 
 ## 3. Cores semânticas
 
 ### 3.1 Prioridade (badge em pílula, 11 px, 800, caixa alta)
 
-| Prioridade | Fundo | Texto |
-|---|---|---|
-| Baixa | `#e8f0fe` | `#174ea6` |
-| Normal | `#e6f4ea` | `#137333` |
-| Alta | `#fef7e0` | `#b06000` |
-| Urgente | `#fce8e6` | `#c5221f` |
+| Prioridade | Fundo claro | Texto claro | Fundo escuro | Texto escuro |
+|---|---|---|---|---|
+| Baixa | `#e8f0fe` | `#174ea6` | `#16324d` | `#c5dcff` |
+| Normal | `#e6f4ea` | `#137333` | `#143528` | `#9ee7b4` |
+| Alta | `#fef7e0` | `#b06000` | `#3a2c12` | `#ffe08a` |
+| Urgente | `#fce8e6` | `#c5221f` | `#3d1c1a` | `#ffb4ae` |
+
+Contraste de texto sobre fundo acima de 4.5:1 nos dois temas. No escuro, `--destructive-foreground` é `#3b1210` (texto escuro sobre `#ff8a80`); no claro continua `#ffffff` sobre `#c61f17`.
 
 ### 3.2 Status e situações
 
-| Elemento | Fundo | Texto | Borda |
-|---|---|---|---|
-| Aguardando aprovação (chip) | `#fff8dc` | `#875700` | `#eac666` |
-| Somente leitura (chip) | `#f6f9fc` | `#42566f` | `#d6e0ec` |
-| Captação Agendada | `#eaf3ff` | `#075dbb` | — |
-| Captação Concluída | `#dcfce7` | `#166534` | — |
-| Captação Cancelada | `#eef2f7` | `#64748b` | — |
-| Corte Em andamento | `#fff3cd` | `#92400e` | — |
-| Corte Concluído | `#dcfce7` | `#166534` | — |
+| Elemento | Fundo claro | Texto claro | Borda clara | Fundo escuro | Texto escuro | Borda escura |
+|---|---|---|---|---|---|---|
+| Aguardando aprovação (chip) | `#fff8dc` | `#875700` | `#eac666` | `#3a3014` | `#ffe08a` | `#d4b46a` |
+| Somente leitura (chip) | `#f6f9fc` | `#42566f` | `#d6e0ec` | `#1c3344` | `#d5e6f0` | `#6f8eaa` |
+| Captação Agendada | `#eaf3ff` | `#075dbb` | — | — | — | — |
+| Captação Concluída | `#dcfce7` | `#166534` | — | — | — | — |
+| Captação Cancelada | `#eef2f7` | `#64748b` | — | — | — | — |
+| Corte Em andamento | `#fff3cd` | `#92400e` | — | — | — | — |
+| Corte Concluído | `#dcfce7` | `#166534` | — | — | — | — |
 
 ### 3.3 Estados de linha de Demanda
 
-| Estado | Valor |
-|---|---|
-| Linha atrasada (fundo) | `#fff1f1` |
-| Rótulo "atrasado" | `#c5221f`, 11 px, 700 |
-| Linha com prazo próximo (fundo) | `#fff8e1` |
-| Rótulo de prazo | `#b06000`, 10 px, 800 |
+| Estado | Claro | Escuro |
+|---|---|---|
+| Linha atrasada (fundo) | `#fff1f1` | `#3d1c1a` |
+| Rótulo "atrasado" | `#c5221f`, 11 px, 700 | `#ffb4ae` |
+| Linha com prazo próximo (fundo) | `#fff8e1` | `#3a2c12` |
+| Rótulo de prazo | `#b06000`, 10 px, 800 | `#ffe08a` |
 
 ### 3.4 Alertas de prazo (dashboard)
 
@@ -106,7 +109,9 @@ A Captação é marcada com uma borda esquerda de 6 px. Paleta: azul `#0a7cff`, 
 
 ## 4. Tipografia — interface principal
 
-- Família: `Arial, Helvetica, sans-serif`, sem fonte web.
+- Texto corrido: **Inter** (`--fonte`). Interface (menu, botões, rótulos, badges): **Manrope** (`--fonte-ui`).
+- Títulos (`h1`–`h4`, `.fonte-titulo`), números e caracteres de destaque (`.fonte-numero`): **Fraunces** (`--fonte-display`). O `h1` usa o eixo WONK.
+- Carregadas com `next/font` em `app/fontes.ts`. O Painel de TV mantém a família própria de `app/tv/tv.css`.
 - Escala real em uso, por frequência: **11 px e 12 px** (dominantes), 13 px, 10 px, 14 px; títulos em 17, 18, 20, 24 e 28 px. Título do login: 32 px.
 - Pesos usados: 400, 700, 750 e 800. O peso 900 aparece só em ícones de sinal.
 - Rótulos de marca e seção: 11 px, 800, caixa alta, `letter-spacing .15em`, cor `loumar-700`.

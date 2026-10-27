@@ -1,7 +1,8 @@
 import { exigirModulo } from '@/lib/auth';
 import { listarLixeira } from '@/features/lixeira/consultas';
 import { TabelaLixeira } from '@/features/lixeira/components/TabelaLixeira';
-import { Titulo } from '@/components/ui';
+import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
+import { ContainerPagina } from '@/components/ui/container-pagina';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,12 +11,13 @@ export default async function PaginaLixeira() {
   const demandas = await listarLixeira();
 
   return (
-    <main style={{ padding: 'var(--conteudo-padding)' }}>
-      <Titulo sobre="Administração">Lixeira</Titulo>
-      <p style={{ color: 'var(--cor-texto-secundario)', marginBottom: 16 }}>
-        Demandas excluídas. Restaure ou exclua definitivamente.
-      </p>
+    <ContainerPagina>
+      <CabecalhoPagina
+        grupo="Administração"
+        titulo="Lixeira"
+        descricao="Demandas excluídas. Restaure ou exclua definitivamente."
+      />
       <TabelaLixeira demandas={demandas} podeGerenciar={usuario.permissoes.gerenciarUsuarios} />
-    </main>
+    </ContainerPagina>
   );
 }

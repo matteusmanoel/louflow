@@ -1,88 +1,125 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
+import { Loader2, Trash2 } from 'lucide-react';
 import type { DemandaLixeira } from '../consultas';
 import { restaurarDemanda, excluirDefinitivamente } from '../actions';
-import { Botao } from '@/components/ui';
+import { AcoesLinha } from '@/components/ui/acoes-linha';
+import { Badge, type BadgeVariant } from '@/components/ui/badge';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { TabelaWrapper, Td, Th, classeColunaAcoes } from '@/components/ui/tabela';
+import { formatarDataHora } from '@/lib/datas';
+import { mostrarFeedback } from '@/lib/toast';
 
 type Props = {
   demandas: DemandaLixeira[];
   podeGerenciar: boolean;
 };
 
+const VARIANTE_STATUS: Record<string, BadgeVariant> = {
+  'Não iniciada': 'leitura',
+  'Em execução': 'prioridade-normal',
+  Pausada: 'prioridade-alta',
+  Aprovação: 'aprovacao',
+  'Ajustes solicitados': 'prioridade-urgente',
+  Concluída: 'secondary',
+  Reprovada: 'prioridade-urgente',
+  Cancelada: 'leitura',
+};
+
 export function TabelaLixeira({ demandas, podeGerenciar }: Props) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   if (demandas.length === 0) {
-    return <p style={{ color: 'var(--cor-texto-secundario)', marginTop: 16 }}>Nenhuma demanda na lixeira.</p>;
+    return (
+      <EstadoVazio
+        icone={Trash2}
+        titulo="Lixeira vazia"
+        descricao="Nenhuma demanda foi movida para a Lixeira."
+      />
+    );
   }
 
   function handleRestaurar(demandaId: string) {
     startTransition(async () => {
       const res = await restaurarDemanda({ demandaId });
-      if (!res.ok) alert(res.mensagem);
-      else window.location.reload();
+      mostrarFeedback(res);
+      if (res.ok) router.refresh();
     });
   }
 
-  function handleExcluir(demandaId: string, title: string) {
-    if (!confirm(`Excluir definitivamente "${title}"? Esta ação não pode ser desfeita.`)) return;
+  function handleExcluir(demandaId: string) {
     startTransition(async () => {
       const res = await excluirDefinitivamente({ demandaId });
-      if (!res.ok) alert(res.mensagem);
-      else window.location.reload();
+      mostrarFeedback(res);
+      if (res.ok) router.refresh();
     });
   }
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 650 }}>
+    <TabelaWrapper>
+      <table className="w-full min-w-[720px] border-collapse text-sm">
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--cor-borda)' }}>
-            <th style={{ padding: '8px 12px' }}>ID</th>
-            <th style={{ padding: '8px 12px' }}>Título</th>
-            <th style={{ padding: '8px 12px' }}>Formato</th>
-            <th style={{ padding: '8px 12px' }}>Status</th>
-            <th style={{ padding: '8px 12px' }}>Excluída em</th>
-            <th style={{ padding: '8px 12px' }}>Por</th>
-            {podeGerenciar && <th style={{ padding: '8px 12px' }}>Ações</th>}
+          <tr>
+            <Th>ID</Th>
+            <Th>Título</Th>
+            <Th>Formato</Th>
+            <Th>Status</Th>
+            <Th>Excluída em</Th>
+            <Th>Por</Th>
+            {podeGerenciar && (
+              <Th className={`${classeColunaAcoes} z-10 bg-[var(--tabela-cabecalho-fundo)]`}>
+                <span className="sr-only">Ações</span>
+              </Th>
+            )}
           </tr>
         </thead>
         <tbody>
           {demandas.map((d) => (
-            <tr key={d.id} style={{ borderBottom: '1px solid var(--cor-borda)' }}>
-              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 13 }}>{d.id}</td>
-              <td style={{ padding: '8px 12px' }}>{d.title}</td>
-              <td style={{ padding: '8px 12px' }}>{d.format}</td>
-              <td style={{ padding: '8px 12px' }}>{d.status}</td>
-              <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
-                {new Date(d.deleted_at).toLocaleString('pt-BR')}
-              </td>
-              <td style={{ padding: '8px 12px' }}>{d.deletado_por_nome ?? '—'}</td>
+            <tr key={d.id} className="group transition-colors hover:bg-[var(--tabela-linha-hover)]">
+              <Td>{d.id}</Td>
+              <Td>{d.title}</Td>
+              <Td>{d.format}</Td>
+              <Td>
+                <Badge variant={VARIANTE_STATUS[d.status] ?? 'leitura'} className="pointer-events-none">
+                  {d.status}
+                </Badge>
+              </Td>
+              <Td className="whitespace-nowrap tabular-nums">{formatarDataHora(d.deleted_at)}</Td>
+              <Td>{d.deletado_por_nome ?? '—'}</Td>
               {podeGerenciar && (
-                <td style={{ padding: '8px 12px', display: 'flex', gap: 8 }}>
-                  <Botao
-                    variante="neutro"
-                    disabled={pending}
-                    onClick={() => handleRestaurar(d.id)}
-                    style={{ fontSize: 13, padding: '4px 10px' }}
-                  >
-                    Restaurar
-                  </Botao>
-                  <Botao
-                    variante="neutro"
-                    disabled={pending}
-                    onClick={() => handleExcluir(d.id, d.title)}
-                    style={{ fontSize: 13, padding: '4px 10px', color: 'var(--cor-erro, red)' }}
-                  >
-                    Excluir
-                  </Botao>
-                </td>
+                <Td className={`${classeColunaAcoes} z-10 group-hover:bg-[var(--tabela-linha-hover)]`}>
+                  {pending ? (
+                    <span className="inline-flex justify-end">
+                      <Loader2 className="h-4 w-4 animate-spin text-[var(--texto-suave)]" aria-hidden />
+                      <span className="sr-only">Processando</span>
+                    </span>
+                  ) : (
+                    <AcoesLinha
+                      rotulo={d.title}
+                      itens={[
+                        { rotulo: 'Restaurar', onSelect: () => handleRestaurar(d.id) },
+                        {
+                          rotulo: 'Excluir',
+                          destrutivo: true,
+                          confirmacao: {
+                            titulo: 'Excluir definitivamente?',
+                            descricao: `A demanda "${d.title}" será excluída permanentemente. Esta ação não pode ser desfeita.`,
+                            confirmar: 'Excluir',
+                          },
+                          onSelect: () => handleExcluir(d.id),
+                        },
+                      ]}
+                    />
+                  )}
+                </Td>
               )}
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </TabelaWrapper>
   );
 }

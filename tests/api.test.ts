@@ -65,12 +65,18 @@ describe('/api/tv', () => {
   it('DTO descarta qualquer campo fora da lista branca', () => {
     const vazar = { email: 'x@exemplo.test', pin_hash: 'h', link: 'https://drive', motivo: 'm' };
     const dto = paraDtoTv({
-      resumoMes: { criadas: 1, concluidas: 0, emAndamento: 1, atrasadas: 0, ...vazar },
-      demandasPendentes: [{ id: 'LF1', titulo: 't', formato: 'Reels', editor: null, influencer: null, status: 's', prioridade: 'Normal', prazo: null, ...vazar }],
-      aprovacoes: [{ demandaId: 'LF1', titulo: 't', editor: null, influencer: null, versao: 1, desde: new Date(), ...vazar }],
-      agenda: [{ titulo: 't', marca: 'm', plataforma: 'p', quando: new Date(), situacao: 's', ...vazar }],
-      captacoes: [{ inicio: new Date(), fim: new Date(), videomaker: 'v', cliente: null, assunto: null, local: null, ...vazar }],
+      resumoMes: { criadas: 1, concluidas: 0, emAndamento: 1, atrasadas: 0, aguardandoAprovacao: 0, semEditor: 0, ...vazar },
+      demandasPendentes: [{ id: 'LF1', titulo: 't', formato: 'Reels', editor: null, influencer: null, status: 's', prioridade: 'Normal', prazo: null, diasParaPrazo: null, ...vazar }],
+      alertas: { totalAtrasadas: 0, totalProximas: 0, itens: [{ titulo: 't', editor: null, influencer: null, prazo: null, diasParaPrazo: 1, atrasada: false, ...vazar }] },
+      aprovacoes: [{ demandaId: 'LF1', titulo: 't', editor: null, influencer: null, versao: 1, desde: new Date(), horasEspera: 2, ...vazar }],
+      influencers: [{ nome: 'Influencer', aprovar: 1, agendar: 0, ...vazar }],
+      entregas: [{ titulo: 't', editor: null, influencer: null, versao: 1, situacao: 'Aprovada', data: new Date(), ...vazar }],
+      agenda: [{ titulo: 't', marca: 'Loumar', plataforma: 'p', quando: new Date(), situacao: 'Agendada', influencer: null, avulso: false, tipoConteudo: null, ...vazar }],
+      captacoes: [{ inicio: new Date(), fim: new Date(), videomaker: 'v', cliente: null, assunto: null, local: null, influencer: null, ...vazar }],
       cortes: [{ titulo: 't', linhaEditorial: 'Viral', programa: 'p', dataPostagem: '2026-11-10', situacao: 's', ...vazar }],
+      ranking: [{ editor: 'Ed', nota: 10, quantidade: 2, staff: false, percentualAprovacao: 100, tempoMedioHoras: 1, demandasNota: 2, ...vazar }],
+      produtividade: { totalConcluidas: 1, tempoMedioHoras: 1, percentualNoPrazo: 100, porFormato: [{ formato: 'Reels', quantidade: 1, ...vazar }], ...vazar },
+      cargaEditores: [{ editor: 'Ed', abertas: 1, atrasadas: 0, disponibilidade: 'Boa disponibilidade', ...vazar }],
     });
     const json = JSON.stringify(dto);
     for (const proibido of ['email', 'pin_hash', 'drive', 'motivo']) expect(json).not.toContain(proibido);

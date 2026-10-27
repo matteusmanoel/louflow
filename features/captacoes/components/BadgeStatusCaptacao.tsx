@@ -1,10 +1,12 @@
-import s from './captacoes.module.css';
+import { Badge } from '@/components/ui/badge';
 import type { StatusCaptacao } from '../consultas';
 
+const VARIANTES: Record<StatusCaptacao, 'prioridade-normal' | 'leitura' | 'prioridade-urgente'> = {
+  Agendada:  'prioridade-normal',
+  Concluída: 'leitura',
+  Cancelada: 'leitura',
+};
+
 export function BadgeStatusCaptacao({ status }: { status: StatusCaptacao }) {
-  return (
-    <span className={`${s.badge} ${s[`badge-${status.replace('í', 'i')}`]}`}>
-      {status}
-    </span>
-  );
+  return <Badge variant={VARIANTES[status] ?? 'leitura'}>{status}</Badge>;
 }

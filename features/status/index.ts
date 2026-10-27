@@ -3,28 +3,15 @@ import type { Tx } from '@/lib/db';
 import { ErroDominio } from '@/lib/errors';
 import { registrarHistorico } from '@/lib/history';
 import type { DemandaStatus } from '@/features/demandas/consultas';
+import { TRANSICOES } from './transicoes';
 
 export type { DemandaStatus };
+export { TRANSICOES };
 
 // ---------------------------------------------------------------------------
 // Máquina de Estado — S1-10
 // Única zona que executa UPDATE demands SET status = ...
 // ---------------------------------------------------------------------------
-
-/**
- * Transições válidas do estado da Demanda.
- * Única fonte de verdade para a máquina de status.
- */
-export const TRANSICOES: Record<DemandaStatus, readonly DemandaStatus[]> = {
-  'Não iniciada':      ['Em execução', 'Cancelada'],
-  'Em execução':       ['Aprovação', 'Pausada', 'Cancelada'],
-  'Pausada':           ['Em execução', 'Cancelada'],
-  'Aprovação':         ['Concluída', 'Ajustes solicitados', 'Em execução', 'Cancelada'],
-  'Ajustes solicitados': ['Em execução', 'Cancelada'],
-  'Concluída':         [],
-  'Reprovada':         [],
-  'Cancelada':         [],
-};
 
 export type EntradaTransicao = {
   demandaId: string;

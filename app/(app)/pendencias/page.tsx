@@ -1,7 +1,10 @@
 import { exigirModulo } from '@/lib/auth';
 import { listarPendencias, listarAdiamentos } from '@/features/pendencias/consultas';
 import { CartaoPendencia } from '@/features/pendencias/components/CartaoPendencia';
-import { Cartao, TextoSuave, Titulo } from '@/components/ui';
+import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
+import { ContainerPagina } from '@/components/ui/container-pagina';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { CheckCircle2 } from 'lucide-react';
 
 export default async function PaginaPendencias() {
   const usuario = await exigirModulo('pendencias');
@@ -15,15 +18,17 @@ export default async function PaginaPendencias() {
   );
 
   return (
-    <main style={{ padding: 'var(--conteudo-padding)', minWidth: 650 }}>
-      <Titulo>Minhas Pendências</Titulo>
+    <ContainerPagina>
+      <CabecalhoPagina grupo="Postagem" titulo="Pendências" />
 
       {comAdiamentos.length === 0 ? (
-        <Cartao>
-          <TextoSuave>Nenhuma pendência no momento.</TextoSuave>
-        </Cartao>
+        <EstadoVazio
+          icone={CheckCircle2}
+          titulo="Nenhuma pendência"
+          descricao="Você não tem pendências no momento."
+        />
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <ul className="m-0 flex list-none flex-col gap-4 p-0">
           {comAdiamentos.map(({ pendencia, adiamentos }) => (
             <li key={pendencia.id}>
               <CartaoPendencia pendencia={pendencia} adiamentos={adiamentos} />
@@ -31,6 +36,6 @@ export default async function PaginaPendencias() {
           ))}
         </ul>
       )}
-    </main>
+    </ContainerPagina>
   );
 }

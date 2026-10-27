@@ -1,9 +1,13 @@
 'use client';
 
 import { useActionState, useRef } from 'react';
-import { Aviso, Botao } from '@/components/ui';
+import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { RodapeAcoes } from '@/components/ui/rodape-acoes';
+import { Textarea } from '@/components/ui/textarea';
 import { adicionarComentario } from '../actions';
-import s from './ComentariosSecao.module.css';
 
 type Estado = { mensagem: string; ok: boolean } | null;
 
@@ -22,26 +26,36 @@ export function FormComentario({ demandaId }: { demandaId: string }) {
   );
 
   return (
-    <form ref={formRef} action={acao} className={s.form}>
+    <form ref={formRef} action={acao} className="flex flex-col gap-3 mt-4">
       <input type="hidden" name="demandaId" value={demandaId} />
-      {estado ? (
-        <Aviso tipo={estado.ok ? 'aviso' : 'erro'}>{estado.mensagem}</Aviso>
-      ) : null}
-      <textarea
-        name="conteudo"
-        className={s.textarea}
-        placeholder="Escreva um comentário…"
-        rows={3}
-        maxLength={2000}
-        required
-        disabled={pendente}
-        aria-label="Conteúdo do comentário"
-      />
-      <div className={s.formRodape}>
-        <Botao type="submit" disabled={pendente}>
-          {pendente ? 'Enviando…' : 'Comentar'}
-        </Botao>
+      {estado && (
+        <Alert variant={estado.ok ? 'info' : 'destructive'}>
+          <AlertDescription>{estado.mensagem}</AlertDescription>
+        </Alert>
+      )}
+      <div className="space-y-1.5">
+        <Label htmlFor="comentario-conteudo">
+          Comentário <span className="text-alerta-atrasada" aria-hidden>*</span>
+        </Label>
+        <Textarea
+          id="comentario-conteudo"
+          name="conteudo"
+          placeholder="Escreva um comentário…"
+          rows={3}
+          maxLength={2000}
+          required
+          disabled={pendente}
+          className="min-h-[72px] resize-y"
+        />
       </div>
+      <RodapeAcoes
+        primaria={
+          <Button type="submit" size="sm" disabled={pendente} className="w-full sm:w-auto">
+            {pendente && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+            {pendente ? 'Enviando…' : 'Comentar'}
+          </Button>
+        }
+      />
     </form>
   );
 }

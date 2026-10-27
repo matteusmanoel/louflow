@@ -1,16 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import type { DemandaAgenda } from '../consultas';
-import { BadgeStatus } from '@/components/ui';
-import type { Status } from '@/components/ui';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import type { BadgeVariant } from '@/components/ui/badge';
+import { formatarData } from '@/lib/datas';
+import { cn } from '@/lib/utils';
 
 type Props = {
   mes: number;
   ano: number;
   demandas: DemandaAgenda[];
   diaSelecionado?: number;
-  /** Reservado para ações futuras (agendar/cancelar diretamente no calendário). */
   podeGerenciar?: boolean;
 };
 
@@ -21,16 +27,41 @@ const NOMES_MESES = [
 
 const NOMES_DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+const STATUS_VARIANTE: Record<string, string> = {
+  'Não iniciada':        'leitura',
+  'Em execução':         'prioridade-normal',
+  'Pausada':             'prioridade-alta',
+  'Aprovação':           'aprovacao',
+  'Ajustes solicitados': 'prioridade-urgente',
+  'Concluída':           'secondary',
+  'Reprovada':           'prioridade-urgente',
+  'Cancelada':           'leitura',
+};
+
+function frasePostagens(qtd: number): string {
+  return qtd === 1 ? '1 postagem' : `${qtd} postagens`;
+}
+
 export function CalendarioAgenda({ mes, ano, demandas, diaSelecionado }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 
+  const chaveMes = `${ano}-${mes}`;
+  const diaInicial = diaSelecionado && diaSelecionado >= 1 && diaSelecionado <= 31 ? diaSelecionado : undefined;
+  const [painel, setPainel] = useState<{ chave: string; dia?: number }>({
+    chave: chaveMes,
+    dia: diaInicial,
+  });
+  if (painel.chave !== chaveMes) {
+    setPainel({ chave: chaveMes });
+  }
+  const diaAberto = painel.chave === chaveMes ? painel.dia : undefined;
+
   const primeiroDia = new Date(ano, mes - 1, 1);
   const ultimoDia = new Date(ano, mes, 0);
-  const offsetInicio = primeiroDia.getDay(); // 0 = Dom
+  const offsetInicio = primeiroDia.getDay();
 
-  // Índice de demandas por dia
   const porDia = new Map<number, DemandaAgenda[]>();
   for (const d of demandas) {
     const diaNum = new Date(d.postDate).getUTCDate();
@@ -51,12 +82,10 @@ export function CalendarioAgenda({ mes, ano, demandas, diaSelecionado }: Props) 
   }
 
   function selecionarDia(dia: number) {
-    const p = new URLSearchParams(params.toString());
-    p.set('dia', String(dia));
-    router.push(`${pathname}?${p.toString()}`);
+    setPainel({ chave: chaveMes, dia });
   }
 
-  const demandasDia = diaSelecionado ? (porDia.get(diaSelecionado) ?? []) : [];
+  const demandasDia = diaAberto ? (porDia.get(diaAberto) ?? []) : [];
   const hoje = new Date();
   const ehMesAtual = hoje.getFullYear() === ano && hoje.getMonth() + 1 === mes;
   const diaAtual = ehMesAtual ? hoje.getDate() : -1;
@@ -65,58 +94,47 @@ export function CalendarioAgenda({ mes, ano, demandas, diaSelecionado }: Props) 
     ...Array(offsetInicio).fill(null),
     ...Array.from({ length: ultimoDia.getDate() }, (_, i) => i + 1),
   ];
-  // Completar até múltiplo de 7
   while (celulas.length % 7 !== 0) celulas.push(null);
 
+  const dataPainel = diaAberto
+    ? formatarData(`${ano}-${String(mes).padStart(2, '0')}-${String(diaAberto).padStart(2, '0')}`)
+    : null;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Cabeçalho de navegação */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <button
+    <div className="flex w-full min-w-0 flex-col gap-6">
+      <div className="flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="icon"
           onClick={() => navegarMes(-1)}
-          style={{
-            background: 'none', border: '1px solid var(--color-borda)', borderRadius: 6,
-            padding: '4px 12px', cursor: 'pointer', color: 'var(--color-texto)',
-          }}
           aria-label="Mês anterior"
+          type="button"
         >
-          ‹
-        </button>
-        <h2 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, flex: 1, textAlign: 'center', color: 'var(--color-texto)' }}>
+          <ChevronLeft className="h-4 w-4" aria-hidden />
+        </Button>
+        <h2 className="flex-1 text-center text-base font-semibold text-[var(--texto-forte)]">
           {NOMES_MESES[mes - 1]} {ano}
         </h2>
-        <button
+        <Button
+          variant="outline"
+          size="icon"
           onClick={() => navegarMes(+1)}
-          style={{
-            background: 'none', border: '1px solid var(--color-borda)', borderRadius: 6,
-            padding: '4px 12px', cursor: 'pointer', color: 'var(--color-texto)',
-          }}
           aria-label="Próximo mês"
+          type="button"
         >
-          ›
-        </button>
+          <ChevronRight className="h-4 w-4" aria-hidden />
+        </Button>
       </div>
 
-      {/* Grade do calendário */}
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, 1fr)',
-          gap: 4,
-          minWidth: 0,
-        }}
+        className="grid w-full grid-cols-7 gap-1"
         role="grid"
         aria-label={`Calendário de ${NOMES_MESES[mes - 1]} ${ano}`}
       >
         {NOMES_DIAS.map((nome) => (
           <div
             key={nome}
-            style={{
-              textAlign: 'center', padding: '6px 0',
-              fontSize: '0.75rem', fontWeight: 600,
-              color: 'var(--color-texto-suave)',
-              textTransform: 'uppercase',
-            }}
+            className="py-1.5 text-center text-[11px] font-semibold uppercase tracking-widest text-[var(--texto-suave)]"
           >
             {nome}
           </div>
@@ -124,61 +142,51 @@ export function CalendarioAgenda({ mes, ano, demandas, diaSelecionado }: Props) 
 
         {celulas.map((dia, idx) => {
           if (dia === null) {
-            return <div key={`vazio-${idx}`} style={{ minHeight: 72 }} role="gridcell" aria-hidden />;
+            return (
+              <div
+                key={`vazio-${idx}`}
+                className="min-h-[72px]"
+                role="gridcell"
+                aria-hidden
+              />
+            );
           }
+
           const qtd = porDia.get(dia)?.length ?? 0;
-          const selecionado = dia === diaSelecionado;
+          const selecionado = dia === diaAberto;
           const ehHoje = dia === diaAtual;
 
           return (
             <button
               key={dia}
+              type="button"
               role="gridcell"
               onClick={() => selecionarDia(dia)}
-              aria-label={`${dia} de ${NOMES_MESES[mes - 1]}${qtd > 0 ? `, ${qtd} postagem${qtd > 1 ? 's' : ''}` : ''}`}
+              aria-label={
+                qtd > 0
+                  ? `${dia} de ${NOMES_MESES[mes - 1]}, ${frasePostagens(qtd)}`
+                  : `${dia} de ${NOMES_MESES[mes - 1]}`
+              }
               aria-selected={selecionado}
-              style={{
-                minHeight: 72,
-                padding: '6px 4px',
-                border: selecionado
-                  ? '2px solid var(--color-primaria)'
-                  : '1px solid var(--color-borda)',
-                borderRadius: 8,
-                background: selecionado
-                  ? 'var(--color-primaria-suave, color-mix(in srgb, var(--color-primaria) 12%, transparent))'
-                  : 'var(--color-cartao)',
-                cursor: 'pointer',
-                textAlign: 'left',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-                transition: 'border-color 0.15s',
-              }}
+              className={cn(
+                'flex min-h-[72px] w-full flex-col gap-1 rounded-lg border p-1.5 text-left transition-colors',
+                selecionado
+                  ? 'border-[var(--loumar-700)] bg-[var(--loumar-50)]'
+                  : 'border-[var(--borda-app)] bg-[var(--superficie)] hover:border-[var(--loumar-600)]',
+              )}
             >
               <span
-                style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 24, height: 24, borderRadius: '50%',
-                  background: ehHoje ? 'var(--color-primaria)' : 'transparent',
-                  color: ehHoje ? '#fff' : 'var(--color-texto)',
-                  fontWeight: ehHoje ? 700 : 400,
-                  fontSize: '0.875rem',
-                }}
+                className={cn(
+                  'fonte-numero inline-flex h-6 w-6 items-center justify-center rounded-full text-sm',
+                  ehHoje
+                    ? 'bg-[var(--loumar-700)] font-bold text-[var(--branco)]'
+                    : 'text-[var(--texto-forte)]',
+                )}
               >
                 {dia}
               </span>
               {qtd > 0 && (
-                <span
-                  style={{
-                    fontSize: '0.7rem',
-                    background: 'var(--color-primaria)',
-                    color: '#fff',
-                    borderRadius: 10,
-                    padding: '1px 6px',
-                    fontWeight: 600,
-                    alignSelf: 'flex-start',
-                  }}
-                >
+                <span className="fonte-numero self-start rounded-full bg-[var(--loumar-700)] px-1.5 py-px text-[10px] font-semibold text-[var(--branco)]">
                   {qtd}
                 </span>
               )}
@@ -187,39 +195,38 @@ export function CalendarioAgenda({ mes, ano, demandas, diaSelecionado }: Props) 
         })}
       </div>
 
-      {/* Painel de detalhes do dia selecionado */}
-      {diaSelecionado && (
-        <div>
-          <h3 style={{ margin: '0 0 12px', fontSize: '1rem', color: 'var(--color-texto)' }}>
-            Postagens em {diaSelecionado}/{String(mes).padStart(2, '0')}/{ano}
+      {diaAberto != null && dataPainel && (
+        <div className="flex min-w-0 flex-col gap-3">
+          <h3 className="m-0 text-base font-medium text-[var(--texto-forte)]">
+            {demandasDia.length === 0 ? 'Nenhuma postagem' : frasePostagens(demandasDia.length)} em {dataPainel}
           </h3>
           {demandasDia.length === 0 ? (
-            <p style={{ color: 'var(--color-texto-suave)', fontSize: '0.875rem' }}>
-              Nenhuma postagem neste dia.
-            </p>
+            <EstadoVazio
+              icone={CalendarDays}
+              titulo="Nenhuma postagem"
+              descricao="Não há demandas agendadas para este dia."
+              className="py-8"
+            />
           ) : (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
               {demandasDia.map((d) => (
-                <li
-                  key={d.id}
-                  style={{
-                    border: '1px solid var(--color-borda)', borderRadius: 8,
-                    padding: '10px 14px', background: 'var(--color-cartao)',
-                    display: 'flex', flexDirection: 'column', gap: 4,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--color-texto)' }}>
-                      {d.titulo}
-                    </span>
-                    <BadgeStatus status={d.status as Status} />
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--color-texto-suave)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    <span>#{d.id}</span>
-                    <span>{d.formato}</span>
-                    {d.influencerNome && <span>Influencer: {d.influencerNome}</span>}
-                    {d.editorNome && <span>Editor: {d.editorNome}</span>}
-                  </div>
+                <li key={d.id}>
+                  <Card>
+                    <CardContent className="flex flex-col gap-1.5 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="fonte-titulo font-semibold text-[var(--texto-forte)]">{d.titulo}</span>
+                        <Badge variant={(STATUS_VARIANTE[d.status] ?? 'default') as BadgeVariant}>
+                          {d.status}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-xs text-[var(--texto-suave)]">
+                        <span>#{d.id}</span>
+                        <span>{d.formato}</span>
+                        {d.influencerNome && <span>Influencer: {d.influencerNome}</span>}
+                        {d.editorNome && <span>Editor: {d.editorNome}</span>}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </li>
               ))}
             </ul>

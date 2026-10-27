@@ -82,7 +82,7 @@ CREATE TABLE user_permissions (
     'acessarCortes','verAbaCortes','verRelatorios','usarAnalista','gerenciarUsuarios',
     'verLixeira','verSorteios',
     -- novas: substituem regras que hoje dependem de nome próprio (D9)
-    'operarDrone','editorPadraoCortes'
+    'operarDrone','editorPadraoCortes','notaInformativaRanking'
   )),
   granted         boolean NOT NULL,
   updated_at      timestamptz NOT NULL DEFAULT now(),

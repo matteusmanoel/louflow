@@ -1,4 +1,9 @@
 import type { RegistroAuditoria } from '../consultas';
+import { ROTULOS_ACAO } from '../rotulos';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { TabelaWrapper, Td, Th } from '@/components/ui/tabela';
+import { formatarDataHora } from '@/lib/datas';
+import { Shield } from 'lucide-react';
 
 type Props = {
   registros: RegistroAuditoria[];
@@ -7,44 +12,82 @@ type Props = {
   total: number;
 };
 
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function rotuloAcao(acao: string): string {
+  const conhecido = (ROTULOS_ACAO as Record<string, string>)[acao];
+  if (conhecido) return conhecido;
+  if (!acao.includes('_')) return acao;
+  const texto = acao.replaceAll('_', ' ');
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+function exibirUsuario(nome: string | null, id: string | null): { visivel: string; title?: string } {
+  if (nome) return { visivel: nome };
+  if (id && UUID.test(id)) return { visivel: 'Usuário', title: id };
+  return { visivel: id ?? '—' };
+}
+
+function exibirAlvo(alvo: string | null): { visivel: string; title?: string } {
+  if (!alvo) return { visivel: '—' };
+  if (UUID.test(alvo)) return { visivel: 'Usuário', title: alvo };
+  return { visivel: alvo };
+}
+
 export function TabelaAuditoria({ registros, pagina, totalPaginas, total }: Props) {
   if (registros.length === 0) {
-    return <p style={{ color: 'var(--cor-texto-secundario)', marginTop: 16 }}>Nenhum registro de auditoria encontrado.</p>;
+    return (
+      <EstadoVazio
+        icone={Shield}
+        titulo="Nenhum registro encontrado"
+        descricao="Não há registros de auditoria para os critérios selecionados."
+      />
+    );
   }
 
   return (
-    <div>
-      <p style={{ color: 'var(--cor-texto-secundario)', marginBottom: 8, fontSize: 13 }}>
+    <div className="flex min-w-0 flex-col gap-3">
+      <p className="text-xs text-[var(--texto-suave)]">
         {total} {total === 1 ? 'registro' : 'registros'} — página {pagina} de {totalPaginas}
       </p>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 650 }}>
+
+      <TabelaWrapper>
+        <table className="w-full min-w-[720px] border-collapse text-sm">
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--cor-borda)' }}>
-              <th style={{ padding: '8px 12px' }}>Ação</th>
-              <th style={{ padding: '8px 12px' }}>Usuário</th>
-              <th style={{ padding: '8px 12px' }}>Alvo</th>
-              <th style={{ padding: '8px 12px' }}>Detalhes</th>
-              <th style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>Data</th>
+            <tr>
+              <Th>Ação</Th>
+              <Th>Usuário</Th>
+              <Th>Alvo</Th>
+              <Th>Detalhes</Th>
+              <Th>Data</Th>
             </tr>
           </thead>
           <tbody>
-            {registros.map((r) => (
-              <tr key={r.id} style={{ borderBottom: '1px solid var(--cor-borda)' }}>
-                <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 13 }}>{r.action}</td>
-                <td style={{ padding: '8px 12px' }}>{r.usuario_nome ?? r.user_id ?? '—'}</td>
-                <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 13 }}>{r.target ?? '—'}</td>
-                <td style={{ padding: '8px 12px', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {r.details ?? '—'}
-                </td>
-                <td style={{ padding: '8px 12px', whiteSpace: 'nowrap', fontSize: 13 }}>
-                  {new Date(r.created_at).toLocaleString('pt-BR')}
-                </td>
-              </tr>
-            ))}
+            {registros.map((r) => {
+              const usuario = exibirUsuario(r.usuario_nome, r.user_id);
+              const alvo = exibirAlvo(r.target);
+              return (
+                <tr key={r.id} className="transition-colors hover:bg-[var(--tabela-linha-hover)]">
+                  <Td className="whitespace-nowrap">{rotuloAcao(r.action)}</Td>
+                  <Td title={usuario.title}>{usuario.visivel}</Td>
+                  <Td title={alvo.title}>{alvo.visivel}</Td>
+                  <Td>
+                    {r.details ? (
+                      <span className="block max-w-[280px] truncate text-[var(--texto-suave)]" title={r.details}>
+                        {r.details}
+                      </span>
+                    ) : (
+                      '—'
+                    )}
+                  </Td>
+                  <Td className="whitespace-nowrap tabular-nums text-xs">{formatarDataHora(r.created_at)}</Td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-      </div>
+      </TabelaWrapper>
     </div>
   );
 }

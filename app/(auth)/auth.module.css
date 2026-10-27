@@ -19,6 +19,11 @@
   height: auto;
   justify-self: center;
 }
+
+/* O arquivo do logo é escuro. No cartão escuro ele some; no claro permanece. */
+:global([data-tema='escuro']) .logo {
+  filter: brightness(0) invert(1);
+}
 .titulo {
   margin: 0;
   font-size: 32px;

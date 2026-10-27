@@ -1,5 +1,6 @@
 import { exigirModulo } from '@/lib/auth';
-import { Titulo, TextoSuave } from '@/components/ui';
+import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
+import { ContainerPagina } from '@/components/ui/container-pagina';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,14 +8,13 @@ export default async function PaginaFichaTecnica() {
   const usuario = await exigirModulo('ficha-tecnica');
 
   return (
-    <main style={{ padding: 'var(--conteudo-padding)', maxWidth: 800 }}>
-      <Titulo sobre="Produção">Ficha Técnica</Titulo>
-
-      <TextoSuave>
+    <ContainerPagina largura="formulario">
+      <CabecalhoPagina grupo="Produção" titulo="Ficha Técnica" />
+      <p className="text-sm text-[var(--texto-suave)]">
         {usuario.permissoes.editarDemandas
           ? 'Para editar a Ficha Técnica de uma Demanda, acesse o detalhe da Demanda e utilize a seção Ficha Técnica.'
           : 'Para visualizar ou preencher a Ficha Técnica, acesse o detalhe da Demanda correspondente.'}
-      </TextoSuave>
-    </main>
+      </p>
+    </ContainerPagina>
   );
 }

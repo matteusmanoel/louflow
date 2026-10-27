@@ -43,6 +43,7 @@ const PERMISSOES_VAZIAS: Permissoes = {
   verSorteios: false,
   operarDrone: false,
   editorPadraoCortes: false,
+  notaInformativaRanking: false,
 };
 
 function sessao(

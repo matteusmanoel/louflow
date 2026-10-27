@@ -1,4 +1,67 @@
-/* Tokens de docs/design-tokens.md. Componentes não usam hex soltos: só estas variáveis. */
+/* ---------------------------------------------------------------------------
+   Tailwind CSS v4
+   @import deve ser a primeira linha real para que o compilador processe o arquivo.
+   --------------------------------------------------------------------------- */
+@import "tailwindcss";
+
+/* Define a variante dark apontando para o atributo data-tema do LouFlow.
+   @custom-variant = define; @variant = aplica. Não trocar a diretiva. */
+@custom-variant dark (&:where([data-tema="escuro"], [data-tema="escuro"] *));
+
+/* Expor tokens Loumar como utilitários Tailwind (bg-superficie, text-texto-forte…).
+   @theme inline é obrigatório: sem "inline" o compilador resolve var() em build-time,
+   quebrando a troca de tema em runtime. */
+@theme inline {
+  --color-loumar-950:   var(--loumar-950);
+  --color-loumar-900:   var(--loumar-900);
+  --color-loumar-800:   var(--loumar-800);
+  --color-loumar-700:   var(--loumar-700);
+  --color-loumar-600:   var(--loumar-600);
+  --color-loumar-100:   var(--loumar-100);
+  --color-loumar-50:    var(--loumar-50);
+
+  --color-superficie:   var(--superficie);
+  --color-fundo-app:    var(--fundo-app);
+  --color-borda-app:    var(--borda-app);
+  --color-texto-forte:  var(--texto-forte);
+  --color-texto-suave:  var(--texto-suave);
+
+  /* Status / prioridade */
+  --color-alerta-atrasada:       var(--alerta-atrasada);
+  --color-alerta-atrasada-fundo: var(--alerta-atrasada-fundo);
+  --color-alerta-hoje:           var(--alerta-hoje);
+  --color-alerta-amanha:         var(--alerta-amanha);
+
+  /* Tabelas */
+  --color-tabela-cabecalho-fundo: var(--tabela-cabecalho-fundo);
+  --color-tabela-cabecalho-texto: var(--tabela-cabecalho-texto);
+  --color-tabela-linha-borda:     var(--tabela-linha-borda);
+  --color-tabela-linha-hover:     var(--tabela-linha-hover);
+
+  /* Raios */
+  --radius-botao:  var(--raio-botao);
+  --radius-card:   var(--raio-card);
+  --radius-modal:  var(--raio-modal);
+  --radius-input:  var(--raio-input);
+  --radius-pilula: var(--raio-pilula);
+
+  /* Sombras */
+  --shadow-card:  var(--sombra-card);
+  --shadow-botao: var(--sombra-botao);
+  --shadow-modal: var(--sombra-modal);
+
+  /* Layout */
+  --spacing-conteudo: var(--conteudo-padding);
+
+  /* Tipografia. Os nomes reais vêm do next/font em app/fontes.ts. */
+  --font-sans: var(--font-inter), var(--font-manrope), ui-sans-serif, sans-serif;
+  --font-ui: var(--font-manrope), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, serif;
+}
+
+/* ---------------------------------------------------------------------------
+   Tokens de docs/design-tokens.md. Componentes não usam hex soltos: só estas variáveis.
+   --------------------------------------------------------------------------- */
 :root {
   --loumar-950: #00283d;
   --loumar-900: #003b59;
@@ -75,8 +138,43 @@
   --topo-altura: 76px;
   --conteudo-padding: 28px;
 
-  --fonte: Arial, Helvetica, sans-serif;
+  --fonte: var(--font-inter), var(--font-manrope), ui-sans-serif, sans-serif;
+  --fonte-ui: var(--font-manrope), var(--font-inter), ui-sans-serif, sans-serif;
+  --fonte-display: var(--font-fraunces), ui-serif, serif;
   color-scheme: light;
+
+  /* -------------------------------------------------------------------------
+     shadcn/ui semantic tokens — mapeados para tokens Loumar.
+     shadcn lê estas variáveis; os valores reais ficam nos tokens acima.
+     ------------------------------------------------------------------------- */
+  --background: var(--fundo-app);
+  --foreground: var(--texto-forte);
+  --card: var(--superficie);
+  --card-foreground: var(--texto-forte);
+  --popover: var(--superficie);
+  --popover-foreground: var(--texto-forte);
+  --primary: var(--loumar-700);
+  --primary-foreground: #ffffff;
+  --secondary: var(--loumar-100);
+  --secondary-foreground: var(--loumar-800);
+  --muted: var(--loumar-50);
+  --muted-foreground: var(--texto-suave);
+  --accent: var(--loumar-100);
+  --accent-foreground: var(--loumar-800);
+  --destructive: var(--alerta-atrasada);
+  --destructive-foreground: #ffffff;
+  --border: var(--borda-app);
+  --input: var(--borda-app);
+  --ring: var(--loumar-600);
+  --radius: var(--raio-botao);
+  --sidebar-background: var(--superficie);
+  --sidebar-foreground: var(--texto-forte);
+  --sidebar-border: var(--borda-app);
+  --sidebar-accent: var(--loumar-100);
+  --sidebar-accent-foreground: var(--loumar-800);
+  --sidebar-primary: var(--loumar-700);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: var(--loumar-600);
 }
 
 [data-tema='escuro'] {
@@ -100,7 +198,39 @@
   --alerta-amanha-fundo: #142a34;
   --alerta-2dias: #ffd166;
   --alerta-2dias-fundo: #142a34;
+
+  /* Semânticos: no claro ficam só em :root. Sem estes valores o escuro herda pílula clara. */
+  --prioridade-baixa-fundo: #16324d;
+  --prioridade-baixa-texto: #c5dcff;
+  --prioridade-normal-fundo: #143528;
+  --prioridade-normal-texto: #9ee7b4;
+  --prioridade-alta-fundo: #3a2c12;
+  --prioridade-alta-texto: #ffe08a;
+  --prioridade-urgente-fundo: #3d1c1a;
+  --prioridade-urgente-texto: #ffb4ae;
+  --chip-aprovacao-fundo: #3a3014;
+  --chip-aprovacao-texto: #ffe08a;
+  --chip-aprovacao-borda: #d4b46a;
+  --chip-leitura-fundo: #1c3344;
+  --chip-leitura-texto: #d5e6f0;
+  --chip-leitura-borda: #6f8eaa;
+  --linha-atrasada-fundo: #3d1c1a;
+  --linha-atrasada-texto: #ffb4ae;
+  --linha-prazo-fundo: #3a2c12;
+  --linha-prazo-texto: #ffe08a;
+  /* Texto escuro sobre o salmon de --alerta-atrasada (#ff8a80). Branco fica abaixo do AA. */
+  --destructive-foreground: #3b1210;
   color-scheme: dark;
+
+  /* shadcn dark overrides — herdados automaticamente via tokens acima;
+     declarar apenas os que precisam de ajuste específico no escuro */
+  --secondary: var(--loumar-100);
+  --secondary-foreground: #edf7fb;
+  --muted: var(--loumar-50);
+  --accent: var(--loumar-100);
+  --accent-foreground: #edf7fb;
+  --sidebar-accent: var(--loumar-100);
+  --sidebar-accent-foreground: #edf7fb;
 }
 
 @media (max-width: 1180px) {
@@ -110,41 +240,83 @@
   }
 }
 
-* {
-  box-sizing: border-box;
-}
+/* Camada base: utilitários Tailwind (em @layer utilities) precisam vencer estas regras.
+   Fora de camada, `a { color }` deixava o texto de <Button asChild><Link> invisível. */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
 
-body {
-  font-family: var(--fonte);
-  font-size: 13px;
-  color: var(--texto-forte);
-  background: var(--fundo-app);
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    font-family: var(--fonte);
+    font-size: 13px;
+    color: var(--texto-forte);
+    background: var(--fundo-app);
+    -webkit-font-smoothing: antialiased;
+  }
 
-[data-tema='escuro'] body {
-  background:
-    radial-gradient(circle at 12% 8%, rgba(11, 141, 202, 0.14), transparent 42%),
-    radial-gradient(circle at 88% 92%, rgba(7, 85, 119, 0.16), transparent 46%),
-    var(--fundo-app);
-}
+  [data-tema='escuro'] body {
+    background:
+      radial-gradient(circle at 12% 8%, rgba(11, 141, 202, 0.14), transparent 42%),
+      radial-gradient(circle at 88% 92%, rgba(7, 85, 119, 0.16), transparent 46%),
+      var(--fundo-app);
+  }
 
-a {
-  color: var(--loumar-700);
-}
+  a {
+    color: var(--loumar-700);
+  }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* Manrope: interface. Inter permanece no texto corrido herdado do body. */
+  :where(nav, button, label, th, .fonte-ui, .uppercase, .grupo-titulo, .item-nav, .sheet-grupo-titulo) {
+    font-family: var(--fonte-ui);
+  }
+
+  /* Fraunces: títulos. h1 leva um pouco de WONK para os caracteres de destaque. */
+  h1,
+  h2,
+  h3,
+  h4,
+  .fonte-titulo {
+    font-family: var(--fonte-display);
+    font-optical-sizing: auto;
+    font-variation-settings: 'SOFT' 30, 'WONK' 0;
+    letter-spacing: -0.02em;
+  }
+
+  h1 {
+    font-variation-settings: 'SOFT' 40, 'WONK' 1;
+  }
+
+  /* Fraunces: números e marcas curtas (datas, valores, versões, PIN). */
+  .fonte-numero {
+    font-family: var(--fonte-display);
+    font-optical-sizing: auto;
+    font-variant-numeric: lining-nums tabular-nums;
+    font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 36;
+    letter-spacing: -0.02em;
+  }
+
+  input[type='date'],
+  input[type='datetime-local'],
+  input[type='time'],
+  input[type='number'] {
+    font-family: var(--fonte-display);
+    font-variant-numeric: lining-nums tabular-nums;
+  }
 }
 
 :focus-visible {

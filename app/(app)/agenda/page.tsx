@@ -1,7 +1,8 @@
 import { exigirModulo } from '@/lib/auth';
-import { Titulo, Cartao } from '@/components/ui';
 import { listarAgendaDb } from '@/features/agenda/consultas';
 import { CalendarioAgenda } from '@/features/agenda/components/CalendarioAgenda';
+import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
+import { ContainerPagina } from '@/components/ui/container-pagina';
 
 type SearchParams = Promise<{ mes?: string; ano?: string; dia?: string }>;
 
@@ -17,20 +18,15 @@ export default async function PaginaAgenda({ searchParams }: { searchParams: Sea
   const demandas = await listarAgendaDb({ mes, ano }, usuario);
 
   return (
-    <main style={{ padding: '24px', maxWidth: 960, margin: '0 auto' }}>
-      <div style={{ marginBottom: 20 }}>
-        <Titulo sobre="Postagem">Agenda de Postagem</Titulo>
-      </div>
-
-      <Cartao>
-        <CalendarioAgenda
-          mes={mes}
-          ano={ano}
-          demandas={demandas}
-          diaSelecionado={diaSelecionado}
-          podeGerenciar={usuario.permissoes.gerenciarAgenda}
-        />
-      </Cartao>
-    </main>
+    <ContainerPagina largura="total">
+      <CabecalhoPagina grupo="Postagem" titulo="Agenda de Postagem" />
+      <CalendarioAgenda
+        mes={mes}
+        ano={ano}
+        demandas={demandas}
+        diaSelecionado={diaSelecionado}
+        podeGerenciar={usuario.permissoes.gerenciarAgenda}
+      />
+    </ContainerPagina>
   );
 }

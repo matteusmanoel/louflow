@@ -16,7 +16,8 @@ const usuario = (perfil: UsuarioSessao['perfil'], concessoes = [] as Parameters<
 describe('permissões padrão por Perfil', () => {
   it('Administrador recebe tudo exceto designações', () => {
     const p = permissoesPadrao('Administrador');
-    for (const c of CHAVES_PERMISSAO) expect(p[c]).toBe(c !== 'editorPadraoCortes');
+    const designacoes = new Set(['editorPadraoCortes', 'notaInformativaRanking']);
+    for (const c of CHAVES_PERMISSAO) expect(p[c]).toBe(!designacoes.has(c));
   });
 
   it('Prêmios só vê Sorteios e ignora concessões individuais', () => {
@@ -48,9 +49,11 @@ describe('concessões individuais', () => {
     const p = resolverPermissoes('Administrador', [
       { chave: 'gerenciarUsuarios', concedida: false },
       { chave: 'editorPadraoCortes', concedida: true },
+      { chave: 'notaInformativaRanking', concedida: true },
     ]);
     expect(p.gerenciarUsuarios).toBe(true);
     expect(p.editorPadraoCortes).toBe(true);
+    expect(p.notaInformativaRanking).toBe(true);
   });
 });
 

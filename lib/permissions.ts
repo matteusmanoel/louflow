@@ -29,6 +29,7 @@ export const CHAVES_PERMISSAO = [
   'verSorteios',
   'operarDrone',
   'editorPadraoCortes',
+  'notaInformativaRanking',
 ] as const;
 export type ChavePermissao = (typeof CHAVES_PERMISSAO)[number];
 export type Permissoes = Record<ChavePermissao, boolean>;
@@ -37,7 +38,7 @@ export type Permissoes = Record<ChavePermissao, boolean>;
  * Chaves que marcam uma designação, não um privilégio: nem o Administrador as recebe
  * por padrão, e a concessão individual vale para qualquer Perfil exceto Prêmios.
  */
-const DESIGNACOES: readonly ChavePermissao[] = ['editorPadraoCortes'];
+const DESIGNACOES: readonly ChavePermissao[] = ['editorPadraoCortes', 'notaInformativaRanking'];
 
 export function ehChavePermissao(valor: string): valor is ChavePermissao {
   return (CHAVES_PERMISSAO as readonly string[]).includes(valor);

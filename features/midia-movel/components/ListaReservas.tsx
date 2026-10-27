@@ -1,29 +1,31 @@
 'use client';
 
-import { useActionState } from 'react';
-import { Aviso, Botao, Cartao, TextoSuave } from '@/components/ui';
+import { useState, useTransition } from 'react';
+import { Video } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { AcoesLinha } from '@/components/ui/acoes-linha';
+import { TabelaWrapper, Th, Td, classeColunaAcoes } from '@/components/ui/tabela';
+import { formatarDataHora } from '@/lib/datas';
+import { cn } from '@/lib/utils';
 import { cancelarReserva } from '../actions';
 import type { ReservaMidiaMovel } from '../consultas';
-import s from './ListaReservas.module.css';
 
 type Estado = { mensagem: string; ok: boolean } | null;
 
-function formatarHorario(d: Date) {
-  return new Intl.DateTimeFormat('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(d));
+type VarianteStatus = 'prioridade-urgente' | 'aprovacao' | 'leitura' | 'secondary';
+
+function varianteStatus(status: ReservaMidiaMovel['status'], emUso: boolean): VarianteStatus {
+  if (emUso) return 'prioridade-urgente';
+  if (status === 'Reservada') return 'aprovacao';
+  if (status === 'Finalizada') return 'secondary';
+  return 'leitura';
 }
 
-function BadgeStatus({ status, emUso }: { status: ReservaMidiaMovel['status']; emUso: boolean }) {
-  if (emUso) return <span className={s.badgeEmUso}>Em uso</span>;
-  if (status === 'Reservada') return <span className={s.badgeReservada}>Reservada</span>;
-  if (status === 'Finalizada') return <span className={s.badgeFinalizada}>Finalizada</span>;
-  return <span className={s.badgeCancelada}>Cancelada</span>;
+function labelStatus(status: ReservaMidiaMovel['status'], emUso: boolean): string {
+  if (emUso) return 'Em uso';
+  return status;
 }
 
 function LinhaReserva({
@@ -35,42 +37,58 @@ function LinhaReserva({
   usuarioId: string;
   ehAdmin: boolean;
 }) {
-  const [estado, acao, pendente] = useActionState<Estado, FormData>(
-    async (_prev: Estado, fd: FormData) => {
-      const resultado = await cancelarReserva({ id: fd.get('id') as string });
-      return { mensagem: resultado.mensagem, ok: resultado.ok };
-    },
-    null,
-  );
+  const [estado, setEstado] = useState<Estado>(null);
+  const [pendente, iniciar] = useTransition();
 
   const podeCancelar = reserva.status === 'Reservada' && (reserva.reservedBy === usuarioId || ehAdmin);
 
   return (
-    <Cartao className={s.linha}>
-      <div className={s.topo}>
-        <div>
-          <strong>{reserva.reason}</strong>
-          <TextoSuave>
-            {formatarHorario(reserva.startsAt)} → {formatarHorario(reserva.endsAt)}
-          </TextoSuave>
-          <TextoSuave>Por: {reserva.reservedByName}</TextoSuave>
-        </div>
-        <BadgeStatus status={reserva.status} emUso={reserva.emUso} />
-      </div>
-
-      {estado ? (
-        <Aviso tipo={estado.ok ? 'aviso' : 'erro'}>{estado.mensagem}</Aviso>
-      ) : null}
-
-      {podeCancelar ? (
-        <form action={acao} style={{ marginTop: '8px' }}>
-          <input type="hidden" name="id" value={reserva.id} />
-          <Botao type="submit" variante="neutro" disabled={pendente}>
-            {pendente ? 'Cancelando…' : 'Cancelar Reserva'}
-          </Botao>
-        </form>
-      ) : null}
-    </Cartao>
+    <tr className="group hover:bg-[var(--tabela-linha-hover)]">
+      <Td>
+        <span className="font-medium">{reserva.reason}</span>
+        {estado && (
+          <Alert variant={estado.ok ? 'info' : 'destructive'} className="mt-2">
+            <AlertDescription>{estado.mensagem}</AlertDescription>
+          </Alert>
+        )}
+      </Td>
+      <Td className="whitespace-nowrap tabular-nums text-[var(--texto-suave)]">
+        {formatarDataHora(reserva.startsAt)} → {formatarDataHora(reserva.endsAt)}
+      </Td>
+      <Td>{reserva.reservedByName}</Td>
+      <Td>
+        <Badge variant={varianteStatus(reserva.status, reserva.emUso)}>
+          {labelStatus(reserva.status, reserva.emUso)}
+        </Badge>
+      </Td>
+      <Td className={cn(classeColunaAcoes, 'group-hover:bg-[var(--tabela-linha-hover)]')}>
+        <AcoesLinha
+          rotulo={reserva.reason}
+          itens={
+            podeCancelar
+              ? [
+                  {
+                    rotulo: 'Cancelar reserva',
+                    destrutivo: true,
+                    confirmacao: {
+                      titulo: 'Cancelar reserva?',
+                      descricao: 'A reserva de Mídia Móvel será cancelada e o horário ficará livre.',
+                      confirmar: 'Cancelar reserva',
+                    },
+                    onSelect: () => {
+                      if (pendente) return;
+                      iniciar(async () => {
+                        const resultado = await cancelarReserva({ id: reserva.id });
+                        setEstado({ mensagem: resultado.mensagem, ok: resultado.ok });
+                      });
+                    },
+                  },
+                ]
+              : []
+          }
+        />
+      </Td>
+    </tr>
   );
 }
 
@@ -84,14 +102,35 @@ export function ListaReservas({
   ehAdmin: boolean;
 }) {
   if (reservas.length === 0) {
-    return <TextoSuave>Nenhuma reserva encontrada.</TextoSuave>;
+    return (
+      <EstadoVazio
+        icone={Video}
+        titulo="Nenhuma reserva"
+        descricao="Não há reservas de Mídia Móvel no momento."
+      />
+    );
   }
 
   return (
-    <div className={s.lista}>
-      {reservas.map((r) => (
-        <LinhaReserva key={r.id} reserva={r} usuarioId={usuarioId} ehAdmin={ehAdmin} />
-      ))}
-    </div>
+    <TabelaWrapper>
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr>
+            <Th>Motivo</Th>
+            <Th>Período</Th>
+            <Th>Responsável</Th>
+            <Th>Status</Th>
+            <Th className={classeColunaAcoes}>
+              <span className="sr-only">Ações</span>
+            </Th>
+          </tr>
+        </thead>
+        <tbody>
+          {reservas.map((r) => (
+            <LinhaReserva key={r.id} reserva={r} usuarioId={usuarioId} ehAdmin={ehAdmin} />
+          ))}
+        </tbody>
+      </table>
+    </TabelaWrapper>
   );
 }
