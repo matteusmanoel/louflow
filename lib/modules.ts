@@ -37,7 +37,7 @@ export const MODULOS: readonly Modulo[] = [
   { slug: 'relatorio', rotulo: 'Relatório Diário', grupo: 'Acompanhamento', fatia: 'S2-03 #11575', reservado: true, permitido: (u) => naoPremios(u) && u.permissoes.verRelatorios },
   { slug: 'ranking', rotulo: 'Ranking', grupo: 'Acompanhamento', fatia: 'S2-04 #11576', reservado: true, permitido: (u) => naoPremios(u) && u.permissoes.verRelatorios },
   { slug: 'analista', rotulo: 'Analista', grupo: 'Acompanhamento', fatia: 'S2-05 #11577', reservado: true, permitido: (u) => naoPremios(u) && u.permissoes.usarAnalista },
-  { slug: 'wiki', rotulo: 'Wiki', grupo: 'Acompanhamento', fatia: 'S2-01 #11573', reservado: true, permitido: naoPremios },
+  { slug: 'wiki', rotulo: 'Wiki', grupo: 'Acompanhamento', fatia: 'S2-01 #11573', permitido: naoPremios },
   { slug: 'sorteios', rotulo: 'Sorteios', grupo: 'Acompanhamento', fatia: 'S3-01 #11578', reservado: true, permitido: (u) => u.permissoes.verSorteios },
   { slug: 'usuarios', rotulo: 'Usuários', grupo: 'Administração', fatia: 'S1-01 #11556', permitido: (u) => naoPremios(u) && u.permissoes.gerenciarUsuarios },
   { slug: 'lixeira', rotulo: 'Lixeira', grupo: 'Administração', fatia: 'S1-13 #11568', permitido: (u) => naoPremios(u) && u.permissoes.verLixeira },
