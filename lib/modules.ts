@@ -34,7 +34,7 @@ export const MODULOS: readonly Modulo[] = [
   { slug: 'drone', rotulo: 'Uso de Drone', grupo: 'Recursos', fatia: 'S1-05 #11560', permitido: (u) => naoPremios(u) && u.permissoes.operarDrone },
   { slug: 'cortes', rotulo: 'Cortes', grupo: 'Produção', fatia: 'S1-06 #11561', permitido: (u) => naoPremios(u) && u.permissoes.verAbaCortes },
   { slug: 'equipamentos', rotulo: 'Catálogo de Equipamentos', grupo: 'Recursos', fatia: 'S3-02 #11579', reservado: true, permitido: naoPremios },
-  { slug: 'relatorio', rotulo: 'Relatório Diário', grupo: 'Acompanhamento', fatia: 'S2-03 #11575', reservado: true, permitido: (u) => naoPremios(u) && u.permissoes.verRelatorios },
+  { slug: 'relatorio', rotulo: 'Relatório Diário', grupo: 'Acompanhamento', fatia: 'S2-03 #11575', permitido: (u) => naoPremios(u) && u.permissoes.verRelatorios },
   { slug: 'ranking', rotulo: 'Ranking', grupo: 'Acompanhamento', fatia: 'S2-04 #11576', reservado: true, permitido: (u) => naoPremios(u) && u.permissoes.verRelatorios },
   { slug: 'analista', rotulo: 'Analista', grupo: 'Acompanhamento', fatia: 'S2-05 #11577', reservado: true, permitido: (u) => naoPremios(u) && u.permissoes.usarAnalista },
   { slug: 'wiki', rotulo: 'Wiki', grupo: 'Acompanhamento', fatia: 'S2-01 #11573', permitido: naoPremios },
