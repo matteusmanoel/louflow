@@ -188,6 +188,79 @@ describe('transicionarStatus', () => {
     expect(dem?.status).toBe('Em execução');
   });
 
+  it('abre ciclo ao entrar em Em execução e grava active_ms ao sair', async () => {
+    const { id: userId } = await criarUsuario();
+    const demandaId = await criarDemanda('Não iniciada', userId);
+    const sql = sqlTeste();
+
+    await sql.begin(async (tx) => {
+      await transicionarStatus(tx, { demandaId, novoStatus: 'Em execução', usuarioId: userId });
+    });
+
+    await sql`
+      UPDATE editing_cycles
+         SET started_at = now() - interval '10 minutes'
+       WHERE demand_id = ${demandaId} AND ended_at IS NULL`;
+
+    await sql.begin(async (tx) => {
+      await transicionarStatus(tx, { demandaId, novoStatus: 'Pausada', usuarioId: userId });
+    });
+    await sql`
+      UPDATE demand_pauses
+         SET paused_at = now() - interval '4 minutes'
+       WHERE demand_id = ${demandaId} AND resumed_at IS NULL`;
+
+    await sql.begin(async (tx) => {
+      await transicionarStatus(tx, { demandaId, novoStatus: 'Em execução', usuarioId: userId });
+    });
+    await sql.begin(async (tx) => {
+      await transicionarStatus(tx, { demandaId, novoStatus: 'Aprovação', usuarioId: userId });
+    });
+
+    const [ciclo] = await sql<{
+      status: string;
+      active_ms: string;
+      paused_ms: string;
+      ended_at: Date | null;
+    }[]>`
+      SELECT status, active_ms::text, paused_ms::text, ended_at
+        FROM editing_cycles
+       WHERE demand_id = ${demandaId}`;
+
+    expect(ciclo?.status).toBe('Concluído');
+    expect(ciclo?.ended_at).not.toBeNull();
+    const ativo = Number(ciclo?.active_ms);
+    const pausado = Number(ciclo?.paused_ms);
+    expect(pausado).toBeGreaterThan(3 * 60 * 1000);
+    expect(pausado).toBeLessThan(5 * 60 * 1000);
+    expect(ativo).toBeGreaterThan(5 * 60 * 1000);
+    expect(ativo).toBeLessThan(7 * 60 * 1000);
+  });
+
+  it('interrompe o ciclo ao cancelar e não abre outro', async () => {
+    const { id: userId } = await criarUsuario();
+    const demandaId = await criarDemanda('Não iniciada', userId);
+    const sql = sqlTeste();
+
+    await sql.begin(async (tx) => {
+      await transicionarStatus(tx, { demandaId, novoStatus: 'Em execução', usuarioId: userId });
+    });
+    await sql.begin(async (tx) => {
+      await transicionarStatus(tx, {
+        demandaId,
+        novoStatus: 'Cancelada',
+        usuarioId: userId,
+        motivo: 'Encerrado no teste',
+      });
+    });
+
+    const ciclos = await sql<{ status: string; ended_at: Date | null }[]>`
+      SELECT status, ended_at FROM editing_cycles WHERE demand_id = ${demandaId}`;
+    expect(ciclos).toHaveLength(1);
+    expect(ciclos[0]?.status).toBe('Interrompido');
+    expect(ciclos[0]?.ended_at).not.toBeNull();
+  });
+
   it('define completed_at ao transicionar para Concluída', async () => {
     const { id: userId } = await criarUsuario();
     const demandaId = await criarDemanda('Aprovação');
