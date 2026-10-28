@@ -1,5 +1,5 @@
 import 'server-only';
-import { db } from '@/lib/db';
+import { db, type Db } from '@/lib/db';
 import { hojeSaoPaulo, validarDia, validarPeriodo, type Periodo } from './periodo';
 
 export type { Periodo };
@@ -52,9 +52,9 @@ function media(valor: unknown): number | null {
  * ou Pausada e algum ciclo cobre o período, atrasadas com prazo dentro do
  * período, tempo médio só de ciclos Concluído encerrados no período.
  */
-export async function produtividadePorEditor(periodo: Periodo): Promise<ProdutividadeEditor[]> {
+export async function produtividadePorEditor(periodo: Periodo, sql: Db = db()): Promise<ProdutividadeEditor[]> {
   const { inicio, fim } = validarPeriodo(periodo);
-  const linhas = await db()<{
+  const linhas = await sql<{
     editor_id: string;
     nome: string;
     concluidas: number;
@@ -135,9 +135,13 @@ export async function produtividadePorEditor(periodo: Periodo): Promise<Produtiv
 }
 
 /** Média de active_ms dos ciclos Concluído do editor (ou de todos) no período. */
-export async function tempoMedioEdicao(periodo: Periodo, editorId?: string): Promise<number | null> {
+export async function tempoMedioEdicao(
+  periodo: Periodo,
+  editorId?: string,
+  sql: Db = db(),
+): Promise<number | null> {
   const { inicio, fim } = validarPeriodo(periodo);
-  const [linha] = await db()<{ media: string | number | null }[]>`
+  const [linha] = await sql<{ media: string | number | null }[]>`
     SELECT ROUND(AVG(c.active_ms))::bigint AS media
       FROM editing_cycles c
      WHERE c.status = 'Concluído'
@@ -150,8 +154,8 @@ export async function tempoMedioEdicao(periodo: Periodo, editorId?: string): Pro
 }
 
 /** Demandas atrasadas agora, o mesmo predicado do quadro. */
-export async function listarDemandasAtrasadas(editorId?: string): Promise<DemandaAtrasada[]> {
-  const linhas = await db()<{
+export async function listarDemandasAtrasadas(editorId?: string, sql: Db = db()): Promise<DemandaAtrasada[]> {
+  const linhas = await sql<{
     id: string;
     titulo: string;
     editor_id: string | null;
@@ -184,9 +188,9 @@ export async function listarDemandasAtrasadas(editorId?: string): Promise<Demand
  * Movimento de um dia civil. Atrasadas usam o dia do relatório como limite,
  * para o número não depender do relógio de quando a pergunta é feita.
  */
-export async function resumoDoDia(dia: string): Promise<ResumoDia> {
+export async function resumoDoDia(dia: string, sql: Db = db()): Promise<ResumoDia> {
   const data = validarDia(dia);
-  const [linha] = await db()<{
+  const [linha] = await sql<{
     entraram: number;
     mudaram: number;
     concluidas: number;
