@@ -1,0 +1,64 @@
+.folha {
+  min-width: 0;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  :global(aside),
+  :global(header.topo-shell),
+  :global(nav.menu-lateral),
+  :global(nav.bottom-bar),
+  :global([data-sonner-toaster]),
+  :global([role='dialog']) {
+    display: none !important;
+  }
+
+  :global(html),
+  :global(body),
+  :global(.grade-shell),
+  :global(.conteudo-shell) {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    background: #fff !important;
+    color: #111827 !important;
+  }
+
+  .ocultarNaImpressao {
+    display: none !important;
+  }
+
+  .folha {
+    background: #fff;
+    color: #111827;
+    font-size: 7pt;
+  }
+
+  .folha :global(*) {
+    color: #111827 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .folha :global(h1) {
+    font-size: 19pt !important;
+  }
+
+  .folha :global(h2) {
+    font-size: 15pt !important;
+    break-after: avoid;
+  }
+
+  .folha :global(h3) {
+    font-size: 11pt !important;
+  }
+
+  .folha :global(tr),
+  .folha :global(h2) {
+    break-inside: avoid;
+  }
+}
