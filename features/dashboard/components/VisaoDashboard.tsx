@@ -11,6 +11,7 @@ import type {
   PostagemAgendada,
   VisaoDashboard as Visao,
 } from '@/features/dashboard/consultas';
+import { RelogioEdicao } from '@/features/status/components/RelogioEdicao';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardDescription, CardHeader } from '@/components/ui/card';
 import { EstadoVazio } from '@/components/ui/estado-vazio';
@@ -154,14 +155,6 @@ function ListaDemandas({ itens, vazio }: { itens: DemandaResumo[]; vazio: string
   );
 }
 
-function formatarDecorrido(ms: number): string {
-  const minutosTotais = Math.max(0, Math.floor(ms / 60_000));
-  const horas = Math.floor(minutosTotais / 60);
-  const minutos = minutosTotais % 60;
-  if (horas === 0) return `${minutos} min`;
-  return `${horas} h ${String(minutos).padStart(2, '0')} min`;
-}
-
 function ListaCiclos({ itens }: { itens: CicloAberto[] }) {
   if (itens.length === 0) return <EstadoVazio titulo="Nenhum ciclo de edição aberto" className="py-4" />;
   return (
@@ -179,9 +172,11 @@ function ListaCiclos({ itens }: { itens: CicloAberto[] }) {
             {ciclo.titulo}
           </Link>
           {ciclo.pausado && <Badge variant="warning">Pausado</Badge>}
-          <span className="fonte-numero text-sm tabular-nums text-[var(--texto-forte)]">
-            {formatarDecorrido(ciclo.decorridoMs)}
-          </span>
+          <RelogioEdicao
+            baseMs={ciclo.decorridoMs}
+            atualizadoEmMs={ciclo.atualizadoEmMs}
+            pausado={ciclo.pausado}
+          />
         </li>
       ))}
     </ul>
