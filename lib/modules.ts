@@ -33,7 +33,7 @@ export const MODULOS: readonly Modulo[] = [
   { slug: 'midia-movel', rotulo: 'Mídia Móvel', grupo: 'Recursos', fatia: 'S1-04 #11559', permitido: naoPremios },
   { slug: 'drone', rotulo: 'Uso de Drone', grupo: 'Recursos', fatia: 'S1-05 #11560', permitido: (u) => naoPremios(u) && u.permissoes.operarDrone },
   { slug: 'cortes', rotulo: 'Cortes', grupo: 'Produção', fatia: 'S1-06 #11561', permitido: (u) => naoPremios(u) && u.permissoes.verAbaCortes },
-  { slug: 'equipamentos', rotulo: 'Catálogo de Equipamentos', grupo: 'Recursos', fatia: 'S3-02 #11579', reservado: true, permitido: naoPremios },
+  { slug: 'equipamentos', rotulo: 'Catálogo de Equipamentos', grupo: 'Recursos', fatia: 'S3-02 #11579', permitido: naoPremios },
   { slug: 'relatorio', rotulo: 'Relatório Diário', grupo: 'Acompanhamento', fatia: 'S2-03 #11575', permitido: (u) => naoPremios(u) && u.permissoes.verRelatorios },
   { slug: 'ranking', rotulo: 'Ranking', grupo: 'Acompanhamento', fatia: 'S2-04 #11576', permitido: (u) => naoPremios(u) && u.permissoes.verRelatorios },
   { slug: 'analista', rotulo: 'Analista', grupo: 'Acompanhamento', fatia: 'S2-05 #11577', permitido: (u) => naoPremios(u) && u.permissoes.usarAnalista },
