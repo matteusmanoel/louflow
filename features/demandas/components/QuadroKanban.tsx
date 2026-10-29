@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Demanda, DemandaStatus } from '../consultas';
-import { COLUNAS_QUADRO, TRANSICOES } from '@/features/status/transicoes';
+import { COLUNAS_QUADRO, TRANSICOES, destinosStatus } from '@/features/status/transicoes';
 import { alterarStatusDemanda } from '@/features/status/actions';
 import { registrarEntrega } from '@/features/aprovacoes/actions';
 import { BadgePrioridade } from './BadgePrioridade';
@@ -106,11 +106,7 @@ export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }:
   }
 
   function destinos(demanda: Demanda): DemandaStatus[] {
-    return TRANSICOES[demanda.status].filter((status) => {
-      if (status === 'Concluída') return false;
-      if (status === 'Aprovação') return podeEntregar && demanda.status === 'Em execução';
-      return podeMover;
-    });
+    return destinosStatus(demanda.status, { podeMover, podeEntregar });
   }
 
   function acionarDestino(demanda: Demanda, destino: DemandaStatus) {

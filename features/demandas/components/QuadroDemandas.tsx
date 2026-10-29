@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, useTransition } from 'react';
-import { Search, X, SlidersHorizontal, Plus, FileText } from 'lucide-react';
+import { Search, X, SlidersHorizontal, Plus, FileText, Kanban, LayoutList } from 'lucide-react';
 import type { Demanda, FiltrosListarDemandas, ResumoEditor } from '../consultas';
 import { CardDemanda } from './CardDemanda';
 import { QuadroKanban } from './QuadroKanban';
+import { TabelaDemandas } from './TabelaDemandas';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,7 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { EstadoVazio } from '@/components/ui/estado-vazio';
 
 const INTERVALO_POLLING_MS = 30_000;
-const CONSULTA_ESTREITA = '(max-width: 649px)';
+const CONSULTA_ESTREITA = '(max-width: 980px)';
 
 function inscreverLargura(ouvir: () => void) {
   const mq = window.matchMedia(CONSULTA_ESTREITA);
@@ -35,6 +37,7 @@ type Props = {
   visao: 'lista' | 'quadro';
   podeMover: boolean;
   podeEntregar: boolean;
+  podePrioridade: boolean;
 };
 
 export function QuadroDemandas({
@@ -46,6 +49,7 @@ export function QuadroDemandas({
   visao,
   podeMover,
   podeEntregar,
+  podePrioridade,
 }: Props) {
   const [demandas, setDemandas] = useState<Demanda[]>(demandasIniciais);
   const [filtros, setFiltros] = useState<FiltrosListarDemandas>({});
@@ -56,8 +60,16 @@ export function QuadroDemandas({
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const estreito = useSyncExternalStore(inscreverLargura, larguraEstreita, () => false);
   const revisaoRef = useRef(revisaoInicial);
+  const recarregarRef = useRef<(filtros: FiltrosListarDemandas) => Promise<void>>(async () => {});
+  const buscaAplicada = useRef<string | undefined>(undefined);
+  const editorRef = useRef(editorFiltro);
+  const periodoRef = useRef({ inicio: periodoInicio, fim: periodoFim });
+  editorRef.current = editorFiltro;
+  periodoRef.current = { inicio: periodoInicio, fim: periodoFim };
   const [, startTransition] = useTransition();
-  const assinaturaServidor = demandasIniciais.map((d) => `${d.id}:${d.status}:${d.title}`).join('|');
+  const assinaturaServidor = demandasIniciais
+    .map((d) => `${d.id}:${d.status}:${d.priority}:${d.title}`)
+    .join('|');
   const [assinaturaVista, setAssinaturaVista] = useState(assinaturaServidor);
   const temFiltrosAtivos =
     Boolean(busca || editorFiltro || periodoInicio || periodoFim);
@@ -75,6 +87,7 @@ export function QuadroDemandas({
     },
     [buscarDemandas],
   );
+  recarregarRef.current = recarregar;
 
   // Polling: verifica revisão a cada 30s
   useEffect(() => {
@@ -111,6 +124,7 @@ export function QuadroDemandas({
           ? { inicio: periodoInicio, fim: periodoFim }
           : undefined,
     };
+    buscaAplicada.current = novosFiltros.busca;
     setFiltros(novosFiltros);
     void recarregar(novosFiltros);
   }
@@ -121,8 +135,32 @@ export function QuadroDemandas({
     setPeriodoInicio('');
     setPeriodoFim('');
     setFiltros({});
+    buscaAplicada.current = undefined;
     void recarregar({});
   }
+
+  // No mobile não há botão Filtrar: a busca aplica sozinha.
+  // A referência da action muda a cada resposta; o ref evita buscar de novo o mesmo texto.
+  useEffect(() => {
+    if (!estreito) return;
+    const id = window.setTimeout(() => {
+      const buscaNova = busca || undefined;
+      if (buscaAplicada.current === buscaNova) return;
+      buscaAplicada.current = buscaNova;
+      const periodo = periodoRef.current;
+      const proximos: FiltrosListarDemandas = {
+        busca: buscaNova,
+        editor_id: editorRef.current || undefined,
+        periodo:
+          periodo.inicio && periodo.fim
+            ? { inicio: periodo.inicio, fim: periodo.fim }
+            : undefined,
+      };
+      setFiltros(proximos);
+      void recarregarRef.current(proximos);
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [busca, estreito]);
 
   function camposAvancados(sufixo: string) {
     return (
@@ -174,27 +212,26 @@ export function QuadroDemandas({
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <div className="flex gap-2" role="group" aria-label="Visão">
-        <Button asChild variant={visao === 'lista' ? 'default' : 'outline'} size="sm">
-          <Link href="/demandas">Lista</Link>
-        </Button>
-        <Button asChild variant={visao === 'quadro' ? 'default' : 'outline'} size="sm">
-          <Link href="/demandas?visao=quadro">Quadro</Link>
-        </Button>
-      </div>
-      {/* Barra de filtros */}
-      <div className="rounded-[var(--raio-painel)] border border-[var(--borda-app)] bg-[var(--superficie)] p-4 flex flex-wrap gap-3 items-end">
-        <SlidersHorizontal className="h-4 w-4 text-[var(--texto-suave)] self-center mt-4" aria-hidden />
+      <div
+        className={cn(
+          'rounded-[var(--raio-painel)] border border-[var(--borda-app)] bg-[var(--superficie)] p-4',
+          estreito ? 'flex items-center gap-2' : 'flex flex-wrap items-end gap-3',
+        )}
+      >
+        {!estreito && (
+          <SlidersHorizontal className="mt-4 h-4 w-4 self-center text-[var(--texto-suave)]" aria-hidden />
+        )}
 
-        <div className="space-y-1 flex-1 min-w-[180px]">
-          <Label htmlFor="filtro-busca">Buscar</Label>
+        <div className={estreito ? 'min-w-0 flex-1' : 'min-w-[180px] flex-1 space-y-1'}>
+          {!estreito && <Label htmlFor="filtro-busca">Buscar</Label>}
           <Input
             id="filtro-busca"
             type="search"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && aplicarFiltros()}
-            placeholder="Título…"
+            placeholder={estreito ? 'Buscar' : 'Título…'}
+            aria-label="Buscar"
           />
         </div>
 
@@ -203,8 +240,8 @@ export function QuadroDemandas({
         {estreito && (
           <Sheet open={filtrosAbertos} onOpenChange={setFiltrosAbertos}>
             <SheetTrigger asChild>
-              <Button type="button" variant="outline" size="sm">
-                Filtros
+              <Button type="button" variant="outline" size="icon" aria-label="Filtros">
+                <SlidersHorizontal className="h-4 w-4" aria-hidden />
               </Button>
             </SheetTrigger>
             <SheetContent side="bottom" className="flex flex-col gap-4">
@@ -225,16 +262,46 @@ export function QuadroDemandas({
           </Sheet>
         )}
 
-        <div className="flex gap-2 self-end">
-          <Button type="button" onClick={aplicarFiltros} size="sm">
-            <Search className="h-3.5 w-3.5" aria-hidden />
-            Filtrar
+        {estreito ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Limpar filtros"
+            onClick={limparFiltros}
+            disabled={!temFiltrosAtivos}
+          >
+            <X className="h-4 w-4" aria-hidden />
           </Button>
-          <Button type="button" variant="outline" onClick={limparFiltros} size="sm" disabled={!temFiltrosAtivos}>
-            <X className="h-3.5 w-3.5" aria-hidden />
-            Limpar
-          </Button>
-        </div>
+        ) : (
+          <>
+            <div className="flex gap-2 self-end">
+              <Button type="button" onClick={aplicarFiltros}>
+                <Search className="h-4 w-4" aria-hidden />
+                Filtrar
+              </Button>
+              <Button type="button" variant="outline" onClick={limparFiltros} disabled={!temFiltrosAtivos}>
+                <X className="h-4 w-4" aria-hidden />
+                Limpar
+              </Button>
+            </div>
+
+            <div className="ml-auto flex gap-2 self-end" role="group" aria-label="Visão">
+              <Button asChild variant={visao === 'lista' ? 'default' : 'outline'}>
+                <Link href="/demandas">
+                  <LayoutList className="h-4 w-4" aria-hidden />
+                  Lista
+                </Link>
+              </Button>
+              <Button asChild variant={visao === 'quadro' ? 'default' : 'outline'}>
+                <Link href="/demandas?visao=quadro">
+                  <Kanban className="h-4 w-4" aria-hidden />
+                  Quadro
+                </Link>
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Resumo por Editor */}
@@ -263,7 +330,7 @@ export function QuadroDemandas({
         </div>
       )}
 
-      {visao === 'quadro' ? (
+      {!estreito && visao === 'quadro' ? (
         demandas.length === 0 ? (
           <EstadoVazio
             icone={FileText}
@@ -296,8 +363,16 @@ export function QuadroDemandas({
               ) : undefined
             }
           />
+        ) : estreito ? (
+          demandas.map((demanda) => <CardDemanda key={demanda.id} demanda={demanda} />)
         ) : (
-          demandas.map((d) => <CardDemanda key={d.id} demanda={d} />)
+          <TabelaDemandas
+            demandas={demandas}
+            podeMover={podeMover}
+            podeEntregar={podeEntregar}
+            podePrioridade={podePrioridade}
+            aoAtualizar={() => void recarregar(filtros)}
+          />
         )}
       </div>
       )}

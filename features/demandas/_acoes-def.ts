@@ -4,6 +4,7 @@ import { ErroDominio } from '@/lib/errors';
 import { registrarHistorico } from '@/lib/history';
 import type { DefinicaoAcao } from '@/lib/action';
 import {
+  schemaAlterarPrioridade,
   schemaAssumirFicha,
   schemaCriarDemanda,
   schemaEditarDemanda,
@@ -157,6 +158,35 @@ export const defEditarDemanda: DefinicaoAcao<typeof schemaEditarDemanda, { id: s
     });
 
     return { dados: { id: entrada.id }, mensagem: 'Demanda atualizada com sucesso.' };
+  },
+};
+
+export const defAlterarPrioridade: DefinicaoAcao<typeof schemaAlterarPrioridade, { id: string }> = {
+  nome: 'alterarPrioridade',
+  schema: schemaAlterarPrioridade,
+  permissao: 'alterarPrioridade',
+  executar: async ({ tx, usuario, entrada }) => {
+    const [demanda] = await tx<{ id: string; priority: string }[]>`
+      SELECT id, priority FROM demands
+      WHERE id = ${entrada.id} AND deleted_at IS NULL
+      FOR UPDATE
+    `;
+    if (!demanda) throw new ErroDominio('Demanda não encontrada.');
+
+    if (demanda.priority !== entrada.priority) {
+      await tx`
+        UPDATE demands SET priority = ${entrada.priority}, updated_at = now()
+        WHERE id = ${entrada.id}
+      `;
+      await registrarHistorico(tx, {
+        demandaId: entrada.id,
+        acao: 'Prioridade alterada',
+        usuarioId: usuario.id,
+        detalhes: `${demanda.priority} → ${entrada.priority}`,
+      });
+    }
+
+    return { dados: { id: entrada.id }, mensagem: 'Prioridade atualizada.' };
   },
 };
 

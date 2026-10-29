@@ -3,7 +3,7 @@ import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
 import { executarAcao, MENSAGEM_SEM_PERMISSAO } from '@/lib/action';
 import type { UsuarioSessao } from '@/lib/session';
 import { resolverPermissoes } from '@/lib/permissions';
-import { defAgendarPostagem, defCancelarAgendamento } from './actions';
+import { defAgendarPostagem, defCancelarAgendamento } from './_acoes-def';
 import { listarAgendaDb } from './consultas';
 
 usarBancoLimpo();

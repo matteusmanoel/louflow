@@ -3,7 +3,7 @@ import { executarAcao, MENSAGEM_SEM_PERMISSAO } from '@/lib/action';
 import { resolverPermissoes } from '@/lib/permissions';
 import type { UsuarioSessao } from '@/lib/session';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
-import { defAgendarCaptacao, defEditarCaptacao, defCancelarCaptacao } from './actions';
+import { defAgendarCaptacao, defEditarCaptacao, defCancelarCaptacao } from './_acoes-def';
 import { listarCaptacoes, obterCaptacao } from './consultas';
 import { encerrarCaptacoesVencidas } from './jobs';
 

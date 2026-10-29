@@ -2,6 +2,7 @@ import type { PropsSecaoDemanda } from '@/features/demandas/secoes';
 import { listarComentariosDb } from '../consultas';
 import { BotaoExcluirComentario } from './BotaoExcluirComentario';
 import { FormComentario } from './FormComentario';
+import { TextoComentario } from './TextoComentario';
 import { EstadoVazio } from '@/components/ui/estado-vazio';
 import { formatarDataHora } from '@/lib/datas';
 import { MessageSquare } from 'lucide-react';
@@ -47,7 +48,7 @@ export async function ComentariosSecao({ demandaId, usuario }: PropsSecaoDemanda
                     {podExcluir && <BotaoExcluirComentario comentarioId={c.id} />}
                   </div>
                 </div>
-                <p className="text-sm text-[var(--texto-forte)] m-0 whitespace-pre-wrap">{c.conteudo}</p>
+                <TextoComentario texto={c.conteudo} />
               </li>
             );
           })}

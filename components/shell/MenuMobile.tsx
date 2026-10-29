@@ -44,7 +44,7 @@ export function MenuMobile({
       >
         <Menu className="h-5 w-5" aria-hidden />
       </Button>
-      <SheetContent side="left" className="flex w-[280px] flex-col p-0">
+      <SheetContent side="left" className="menu-drawer flex w-[280px] flex-col p-0 transition-none">
         <SheetTitle className="sr-only">Menu</SheetTitle>
         <div className="bg-gradient-to-b from-[var(--loumar-900)] to-[var(--loumar-950)] px-4 py-4 pr-12">
           <Image

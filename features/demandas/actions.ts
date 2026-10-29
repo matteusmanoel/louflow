@@ -1,7 +1,13 @@
 'use server';
 
 import { criarAcao } from '@/lib/action';
-import { defCriarDemanda, defEditarDemanda, defExcluirDemanda, defAssumirFicha } from './_acoes-def';
+import {
+  defAlterarPrioridade,
+  defAssumirFicha,
+  defCriarDemanda,
+  defEditarDemanda,
+  defExcluirDemanda,
+} from './_acoes-def';
 
 /** Cria uma nova Demanda. */
 export const criarDemanda = criarAcao(defCriarDemanda);
@@ -17,3 +23,6 @@ export const excluirDemanda = criarAcao(defExcluirDemanda);
  * Regras: formato não pode ser Cortes; demanda deve estar sem editor.
  */
 export const assumirFicha = criarAcao(defAssumirFicha);
+
+/** Altera só a prioridade. O status continua em features/status. */
+export const alterarPrioridadeDemanda = criarAcao(defAlterarPrioridade);
