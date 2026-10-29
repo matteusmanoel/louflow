@@ -3,7 +3,7 @@ import { executarAcao, MENSAGEM_SEM_PERMISSAO } from '@/lib/action';
 import { resolverPermissoes } from '@/lib/permissions';
 import type { UsuarioSessao } from '@/lib/session';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
-import { defSalvarFichaTecnica } from './actions';
+import { defSalvarFichaTecnica } from './_acoes-def';
 import { obterFichaTecnica } from './consultas';
 
 usarBancoLimpo();

@@ -10,6 +10,7 @@
     'menu topo'
     'menu conteudo';
   min-height: 100vh;
+  transition: grid-template-columns 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 :global([data-menu='recolhido']) :global(.grade-shell) {
@@ -339,6 +340,18 @@
   /* Padding extra para não sobrepor o bottom bar */
   :global(.conteudo-shell) {
     padding-bottom: calc(var(--conteudo-padding) + 64px);
+  }
+
+  /* O "Mais" da bottom bar abre o menu. O topo só fica para quem não tem a barra. */
+  :global(.topo-shell--so-desktop) {
+    display: none;
+  }
+
+  :global(.grade-shell:has(.topo-shell--so-desktop)) {
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'conteudo'
+      'bottom-bar';
   }
 }
 

@@ -55,7 +55,7 @@ export function AppShell({ usuario, children }: { usuario: UsuarioSessao; childr
 
   return (
     <MenuLateral grupos={grupos}>
-      <header className="topo-shell">
+      <header className={mostrarMenu ? 'topo-shell topo-shell--so-desktop' : 'topo-shell'}>
         <MenuMobile grupos={grupos} nome={usuario.nome} perfil={perfil} visivel={mostrarMenu} />
 
         <div className="usuario-info">

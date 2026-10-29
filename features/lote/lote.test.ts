@@ -5,7 +5,7 @@ import type { UsuarioSessao } from '@/lib/session';
 import { emTransacao, type Tx } from '@/lib/db';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
 import { desligarUsuario, processarLoteDesligamento } from './index';
-import { defLoteDesligamento } from './actions';
+import { defLoteDesligamento } from './_acoes-def';
 
 usarBancoLimpo();
 

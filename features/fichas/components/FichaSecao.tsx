@@ -50,7 +50,7 @@ export async function FichaSecao({ demandaId, usuario }: PropsSecaoDemanda) {
       )}
 
       {podeEditar && (
-        <EditarFicha temFicha={ficha != null}>
+        <EditarFicha key={ficha?.updatedAt?.toISOString() ?? 'nova'} temFicha={ficha != null}>
           <FormFichaTecnica demandaId={demandaId} ficha={ficha} />
         </EditarFicha>
       )}

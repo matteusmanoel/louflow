@@ -76,6 +76,7 @@ export default async function PaginaDemandas({ searchParams }: Props) {
         visao={visao === 'quadro' ? 'quadro' : 'lista'}
         podeMover={usuario.permissoes.alterarStatus}
         podeEntregar={usuario.permissoes.editarDemandas}
+        podePrioridade={usuario.permissoes.alterarPrioridade}
       />
     </ContainerPagina>
   );

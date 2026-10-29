@@ -53,7 +53,13 @@ export const schemaAssumirFicha = z.object({
   demandaId: z.string().min(1),
 });
 
+export const schemaAlterarPrioridade = z.object({
+  id: z.string().min(1),
+  priority: z.enum(['Baixa', 'Normal', 'Alta', 'Urgente']),
+});
+
 export type EntradaCriarDemanda = z.infer<typeof schemaCriarDemanda>;
 export type EntradaEditarDemanda = z.infer<typeof schemaEditarDemanda>;
 export type EntradaExcluirDemanda = z.infer<typeof schemaExcluirDemanda>;
 export type EntradaAssumirFicha = z.infer<typeof schemaAssumirFicha>;
+export type EntradaAlterarPrioridade = z.infer<typeof schemaAlterarPrioridade>;

@@ -3,7 +3,7 @@ import { executarAcao, MENSAGEM_SEM_SESSAO } from '@/lib/action';
 import { resolverPermissoes } from '@/lib/permissions';
 import type { UsuarioSessao } from '@/lib/session';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
-import { defAdicionarComentario, defExcluirComentario } from './actions';
+import { defAdicionarComentario, defExcluirComentario } from './_acoes-def';
 import { listarComentarios } from './consultas';
 import { listarHistorico } from '@/features/historico/consultas';
 
