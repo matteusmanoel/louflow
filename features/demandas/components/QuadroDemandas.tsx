@@ -64,8 +64,6 @@ export function QuadroDemandas({
   const buscaAplicada = useRef<string | undefined>(undefined);
   const editorRef = useRef(editorFiltro);
   const periodoRef = useRef({ inicio: periodoInicio, fim: periodoFim });
-  editorRef.current = editorFiltro;
-  periodoRef.current = { inicio: periodoInicio, fim: periodoFim };
   const [, startTransition] = useTransition();
   const assinaturaServidor = demandasIniciais
     .map((d) => `${d.id}:${d.status}:${d.priority}:${d.title}`)
@@ -87,7 +85,12 @@ export function QuadroDemandas({
     },
     [buscarDemandas],
   );
-  recarregarRef.current = recarregar;
+
+  useEffect(() => {
+    editorRef.current = editorFiltro;
+    periodoRef.current = { inicio: periodoInicio, fim: periodoFim };
+    recarregarRef.current = recarregar;
+  }, [editorFiltro, periodoInicio, periodoFim, recarregar]);
 
   // Polling: verifica revisão a cada 30s
   useEffect(() => {
