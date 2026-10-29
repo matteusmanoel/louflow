@@ -2,6 +2,7 @@ import 'server-only';
 import type postgres from 'postgres';
 import { db, type Sql } from '@/lib/db';
 import type { DemandaPrioridade, DemandaStatus } from '@/features/demandas/consultas';
+import { listarRelogiosAbertos } from '@/features/status/consultas';
 import type { UsuarioSessao } from '@/lib/session';
 
 /** Amostra curta no painel do administrador. */
@@ -31,6 +32,7 @@ export type CicloAberto = {
   demandaId: string;
   titulo: string;
   decorridoMs: number;
+  atualizadoEmMs: number;
   pausado: boolean;
 };
 
@@ -204,30 +206,9 @@ async function carregarAdministrador(): Promise<VisaoAdministrador> {
 async function carregarEditor(usuarioId: string): Promise<VisaoEditor> {
   const sql = db();
   const escopo = escopoEditor(sql, usuarioId);
-  const [demandas, ciclos, entregas] = await Promise.all([
+  const [demandas, relogios, entregas] = await Promise.all([
     listarDemandas(sql, escopo, LIMITE_LISTA),
-    sql<{ demanda_id: string; titulo: string; decorrido_ms: string | number; pausado: boolean }[]>`
-      SELECT
-        d.id AS demanda_id,
-        d.title AS titulo,
-        GREATEST(
-          0,
-          FLOOR(
-            EXTRACT(EPOCH FROM (now() - c.started_at)) * 1000
-            - COALESCE(EXTRACT(EPOCH FROM (now() - p.paused_at)) * 1000, 0)
-          )
-        )::bigint AS decorrido_ms,
-        (p.id IS NOT NULL) AS pausado
-      FROM editing_cycles c
-      JOIN demands d ON d.id = c.demand_id
-      LEFT JOIN demand_pauses p
-        ON p.demand_id = d.id
-       AND p.resumed_at IS NULL
-      WHERE c.ended_at IS NULL
-        AND ${escopo}
-      ORDER BY c.started_at ASC
-      LIMIT ${LIMITE_LISTA}
-    `,
+    listarRelogiosAbertos(sql, escopo, LIMITE_LISTA),
     sql<{
       id: string;
       demand_id: string;
@@ -261,10 +242,11 @@ async function carregarEditor(usuarioId: string): Promise<VisaoEditor> {
   return {
     perfil: 'Editor',
     demandas,
-    ciclos: ciclos.map((c) => ({
-      demandaId: c.demanda_id,
+    ciclos: relogios.map((c) => ({
+      demandaId: c.demandaId,
       titulo: c.titulo,
-      decorridoMs: Number(c.decorrido_ms),
+      decorridoMs: c.baseMs,
+      atualizadoEmMs: c.atualizadoEmMs,
       pausado: c.pausado,
     })),
     entregas: entregas.map((e) => ({

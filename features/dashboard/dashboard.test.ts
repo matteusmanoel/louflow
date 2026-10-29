@@ -295,4 +295,36 @@ describe('dashboard por perfil', () => {
     expect(andando!.decorridoMs).toBeGreaterThan(44 * 60_000);
     expect(andando!.decorridoMs).toBeLessThan(46 * 60_000);
   });
+
+  it('relógio desconta a pausa já encerrada e não a conta de novo', async () => {
+    const editor = await criarUsuario({ perfil: 'Editor' });
+    const demanda = await inserirDemanda({
+      title: 'Ciclo com pausa encerrada',
+      status: 'Em execução',
+      editorId: editor.id,
+    });
+
+    await sqlTeste()`
+      INSERT INTO editing_cycles (id, demand_id, version, editor_id, started_at, status)
+      VALUES (${novoId('cy')}, ${demanda}, 1, ${editor.id}, now() - interval '2 hours', 'Em andamento')
+    `;
+    await sqlTeste()`
+      INSERT INTO demand_pauses (id, demand_id, paused_at, resumed_at, user_id)
+      VALUES (
+        ${novoId('pa')},
+        ${demanda},
+        now() - interval '90 minutes',
+        now() - interval '60 minutes',
+        ${editor.id}
+      )
+    `;
+
+    const visao = await carregarDashboard(sessao(editor.id, 'Editor'));
+    if (visao.perfil !== 'Editor') throw new Error('perfil inesperado');
+    const ciclo = visao.ciclos.find((c) => c.titulo === 'Ciclo com pausa encerrada');
+    expect(ciclo?.pausado).toBe(false);
+    expect(ciclo!.decorridoMs).toBeGreaterThan(89.5 * 60_000);
+    expect(ciclo!.decorridoMs).toBeLessThan(90.5 * 60_000);
+    expect(Math.abs(ciclo!.atualizadoEmMs - Date.now())).toBeLessThan(5_000);
+  });
 });
