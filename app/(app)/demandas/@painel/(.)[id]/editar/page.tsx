@@ -6,5 +6,6 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function PainelEditar({ params }: Props) {
   const { id } = await params;
-  return <FormularioDemandaPagina variante="modal" id={id} />;
+  const idDemanda = id.replace(/^(?:\(\.\))+/u, '');
+  return <FormularioDemandaPagina variante="modal" id={idDemanda} />;
 }

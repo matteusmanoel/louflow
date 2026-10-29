@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -15,15 +16,19 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { mostrarFeedback } from '@/lib/toast';
 import { excluirComentario } from '../actions';
 
 type Estado = { mensagem: string; ok: boolean } | null;
 
 export function BotaoExcluirComentario({ comentarioId }: { comentarioId: string }) {
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [, acao, pendente] = useActionState<Estado, FormData>(
     async (_prev: Estado, fd: FormData) => {
       const resultado = await excluirComentario({ comentarioId: fd.get('comentarioId') as string });
+      mostrarFeedback(resultado);
+      if (resultado.ok) router.refresh();
       return { mensagem: resultado.mensagem, ok: resultado.ok };
     },
     null,

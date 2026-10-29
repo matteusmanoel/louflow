@@ -293,16 +293,17 @@ O shell está em `components/shell/` e usa CSS Grid:
 
 - **Recolhido:** sidebar passa de 256 px para 82 px via `data-menu="recolhido"` em `<html>`.
 - **Até 1180 px:** padding de conteúdo e menu ligeiramente menores.
-- **Abaixo de 980 px:** a sidebar sai da grade; o topbar ganha o botão hambúrguer (`MenuMobile`, `Sheet` à esquerda) e aparece a bottom bar (`BottomBar`, §7).
+- **Abaixo de 980 px:** a sidebar sai da grade e aparece a bottom bar (`BottomBar`, §7). O topbar some quando a barra está visível: o "Mais" abre o mesmo `Sheet`. Perfil com um destino só (sem barra) mantém o topbar, com tema e Sair.
 - **Abaixo de 650 px:** conteúdo com padding reduzido (14 px).
 - **Grid do conteúdo:** `.conteudo-shell` é um grid de uma coluna e **precisa** de `grid-template-columns: minmax(0, 1fr)` (ou `min-width: 0` em todos os filhos). Sem isso, uma tabela larga alarga a página inteira; foi o que a auditoria mediu em Usuários, Drone, Auditoria e Cortes (737–932 px num viewport de 390 px).
 
 ### 5.2 Topbar
 
-- Altura: 76 px (`--topo-altura`).
+- Altura: 76 px (`--topo-altura`), só no desktop e no perfil sem bottom bar.
 - Exibe nome e perfil do usuário à esquerda; ações (tema, sair) à direita.
 - Fundo: `var(--superficie)` com `border-bottom: 1px solid var(--borda-app)` e `var(--sombra-topo)`.
 - **Não recolorir** o topbar com cores da marca; manter neutro.
+- **Abaixo de 980 px, com a bottom bar visível, o topbar não aparece.** O menu já está no "Mais". A linha do grid do topo some junto (`topo-shell--so-desktop`).
 
 ### 5.3 Conteúdo das páginas
 
@@ -416,7 +417,7 @@ Implementado em `components/shell/`. Módulos reservados ficam no grupo virtual 
 
 ### 6.6 Rodapé da sidebar
 
-O rodapé da sidebar e do Sheet tem o seletor de tema e os links Preferências e Sair. Preferências não aparece no grupo Conta. O grupo some quando fica vazio. O topbar fica com o hambúrguer (abaixo de 980 px) e o nome e o perfil.
+O rodapé da sidebar e do Sheet tem o seletor de tema e os links Preferências e Sair. Preferências não aparece no grupo Conta. O grupo some quando fica vazio. Abaixo de 980 px o nome e o perfil ficam no topo do Sheet, aberto pelo "Mais". O topbar com hambúrguer não entra nessa largura quando a bottom bar existe.
 
 ---
 
@@ -424,9 +425,7 @@ O rodapé da sidebar e do Sheet tem o seletor de tema e os links Preferências e
 
 ### 7.1 Quando usar
 
-Abaixo de **980 px** (breakpoint de `shell.module.css`, confirmado na auditoria), a sidebar é substituída por:
-- **Botão de menu hambúrguer** no topbar → abre sidebar em `Sheet` (drawer lateral).
-- **Bottom bar** fixa com os módulos principais.
+Abaixo de **980 px** (breakpoint de `shell.module.css`, confirmado na auditoria), a sidebar vira `Sheet` à esquerda e a bottom bar fica fixa. O "Mais" abre o Sheet. O topbar não aparece nessa largura, salvo o perfil com um destino só, que não tem barra nem "Mais".
 
 ### 7.2 Módulos na bottom bar
 
@@ -685,7 +684,8 @@ Para ações em linhas de tabela (kebab menu):
 - Contagem de filtros ativos: badge numérico no botão de filtros quando > 0.
 - **Ativar um filtro não pode mudar o layout da toolbar.** Em `/demandas`, o "Limpar" aparecia entre Filtrar e Nova demanda e encolhia a busca. O botão "Limpar filtros" fica sempre renderizado: `disabled` (ou `invisible` com espaço reservado) quando não há filtro, ativo quando há. Alternativa: um link "Limpar" na linha do resumo dos filtros, fora da toolbar.
 - A ação primária da página (ex.: "Nova demanda") aparece **uma vez**, no cabeçalho da página, e não se repete na toolbar.
-- No mobile, os filtros avançados ficam recolhidos (botão "Filtros" com contagem que abre `Sheet`); o painel de filtros aberto não ocupa a primeira tela inteira.
+- Filtrar e Limpar usam a altura padrão do botão (`h-9`), a mesma dos inputs. O seletor de visão da lista, quando existe, fica dentro da barra, com ícone, também em `h-9`. Ele só aparece no desktop.
+- **Abaixo de 980 px a barra é só a busca e dois ícones.** O primeiro, `SlidersHorizontal`, tem `aria-label="Filtros"` e nenhum texto visível; abre o `Sheet` por baixo com os filtros avançados e Aplicar. O segundo, `X`, fica ao lado, com `aria-label="Limpar filtros"`, e só habilita quando há filtro ativo. A busca aplica sozinha. Não há Filtrar, Limpar com rótulo, nem seletor de visão.
 
 ### 10.4 Estados de linha
 
@@ -813,7 +813,7 @@ async function handleSubmit() {
 // (Server Actions rodam no servidor; Sonner é biblioteca de cliente)
 ```
 
-Para Server Actions chamadas via `useActionState` / formulário nativo, o feedback de erro vai no componente `Alert`; o toast fica para navegações pós-sucesso ou ações fora de formulário.
+Sucesso de uma gravação que permanece na mesma tela (comentário, ficha técnica, campos de uma aba) dispara `mostrarFeedback` e `router.refresh()`. A mensagem de sucesso não fica no corpo do painel: o refetch já mostra o dado novo. Erro de formulário continua no `Alert` do formulário.
 
 ### 12.4 Conteúdo
 
@@ -885,17 +885,19 @@ Um componente só serve para detalhe, cadastro e edição. A lista fica por baix
 
 **Medida.** No desktop o painel chega a 1120 px e a 92% da viewport, com altura de até 90% da tela. Abaixo de 980 px ele ocupa a tela inteira: cabeçalho e rodapé ficam fixos, e só o miolo rola. O formulário, dentro do painel, permanece em `max-w-3xl` alinhado à esquerda. O rodapé do formulário ocupa a largura do painel.
 
-**Abas.** A barra só aparece quando a entidade tem duas seções ou mais. A aba ativa vai na query `aba`. Para Demanda: Detalhes (dados, status e ficha técnica), Entregas, Comentários, Histórico. Para Usuário: Detalhes e Permissões. Cadastro e edição não são abas: são um fluxo só.
+**Abas.** A barra só aparece quando a entidade tem duas seções ou mais. A aba ativa vai na query `aba`. Para Demanda: Detalhes (dados, status e ficha técnica), Entregas, Comentários, Histórico. Para Usuário: Detalhes e Permissões. Cadastro e edição não são abas: são um fluxo só. Comentário longo trunca em quatro linhas e abre o restante com "Ver mais...".
 
-**Fechar.** No detalhe, X, Escape, clique no fundo e voltar fecham e devolvem a lista, inclusive `?visao=quadro`. No cadastro e na edição, se o formulário mudou, esses gestos e o Cancelar perguntam "Descartar alterações?" no `AlertDialog`. Salvar com sucesso não pergunta.
+**Fechar.** No detalhe, X, Escape, clique no fundo e voltar fecham e devolvem a lista, inclusive `?visao=quadro`. No cadastro e na edição, se o formulário mudou, esses gestos e o Cancelar perguntam "Descartar alterações?" no `AlertDialog`. Salvar com sucesso não pergunta. Há um painel por vez: o modal de edição fecha com um passo de histórico (`router.back()`), de volta ao detalhe que já estava aberto. Não se faz `push` da URL do detalhe por cima da edição — o fecho do detalhe também é `back()`, e os dois painéis passariam a reabrir um ao outro. Na variante página, fechar e salvar usam `replace` para o destino.
 
-**Depois de gravar.** Sucesso atualiza na hora o painel e a lista ou o quadro por trás. Salvar e atualizar mantêm o painel aberto na mesma aba. Excluir ou mover para a lixeira fecha o painel, volta à lista e atualiza só ela. Falha mantém o painel e os dados como estavam. O mecanismo é o `router.refresh()` já usado nas ações, mais a sincronização existente do quadro. Status continua passando por `features/status/`. O refetch só relê o que o servidor gravou.
+**Depois de gravar.** Sucesso atualiza na hora o painel e a lista ou o quadro por trás, e a confirmação é um toast — não um alerta no corpo. Salvar um campo da mesma aba (comentário, ficha) mantém o painel aberto e refaz a leitura. Salvar a edição da entidade volta ao detalhe já atualizado. Excluir ou mover para a lixeira fecha o painel, volta à lista e atualiza só ela. Falha mantém o painel e os dados como estavam, com o erro no formulário. O mecanismo é o `router.refresh()` já usado nas ações, mais a sincronização existente do quadro. Status continua passando por `features/status/`. O refetch só relê o que o servidor gravou.
 
 O mesmo painel vale para as entidades que já têm rota de formulário (Usuários, Captações, Drone) e para as próximas. A primeira implementação é Demandas. As outras adotam o mesmo componente, uma entidade por vez.
 
 ### 13.4 Quadro de Demandas
 
-`/demandas` tem duas visões. A lista é a padrão. O quadro fica em `?visao=quadro` e rola na horizontal dentro da página, sem alargar o documento.
+`/demandas` tem duas visões no desktop (a partir de 981 px, quando a sidebar está na grade). A lista é a padrão e é uma tabela: a linha abre o painel. Status e prioridade mudam por seletores na linha quando a permissão permite. O status segue `destinosStatus`: Cancelada pede o motivo, Aprovação abre a entrega, Concluída não é destino livre. A prioridade grava só esse campo, com a permissão `alterarPrioridade`. Sem permissão, a célula fica em badge de leitura. O quadro fica em `?visao=quadro` e rola na horizontal dentro da página, sem alargar o documento. O seletor Lista/Quadro fica dentro da barra de filtros.
+
+**Abaixo de 980 px a lista é em cards** e o quadro não entra, mesmo com `?visao=quadro` na URL. O card inteiro abre o painel. Não há seletor de visão nem seletores de status e prioridade: isso fica na tabela. A barra de filtros segue o recuo de §10.3.
 
 As colunas são os oito status, nesta ordem: Não iniciada, Em execução, Pausada, Ajustes solicitados, Aprovação, Concluída, Reprovada, Cancelada. O card abre o painel de §13.3.
 
@@ -1013,8 +1015,8 @@ export function BadgePrioridade({ prioridade }: { prioridade: Prioridade }) {
 |---|---|---|
 | — (padrão) | ≥ 1180 px | Sidebar 256 px, padding completo |
 | `< 1180 px` | < 1180 px | Menu e padding ligeiramente menores |
-| `< 980 px` | < 980 px | Sidebar vira drawer (Sheet) + bottom bar |
-| `< 650 px` | < 650 px | Padding de conteúdo reduzido; alguns grids colapsam para 1 coluna |
+| `< 980 px` | < 980 px | Sidebar vira drawer + bottom bar; topbar some. Lista operacional em cards; tabela e quadro só acima |
+| `< 650 px` | < 650 px | Padding de conteúdo reduzido; grids de formulário em uma coluna |
 
 Os breakpoints do shell são só CSS (`shell.module.css`, `globals.css`), sem detecção em JS. Não criar breakpoints novos fora dessa tabela. Os utilitários `sm:`/`md:` do Tailwind (640/768 px) servem para o conteúdo, não para o shell.
 
@@ -1043,6 +1045,8 @@ Tabelas largas devem ter `overflow-x: auto` no wrapper. **Isso só funciona se t
 </div>
 ```
 
+Abaixo de 980 px, a lista operacional (Demandas, e as próximas que seguirem §13.4) troca a tabela por cards. Tabela e quadro ficam no desktop, junto da sidebar.
+
 Em mobile, além disso:
 - Ocultar colunas menos importantes com `hidden sm:table-cell`.
 - Nunca ocultar colunas de status ou ações; a coluna de ações é `sticky right-0` (§10.2).
@@ -1062,10 +1066,9 @@ Não usar tamanhos de fonte fixos para títulos — preferir `text-xl` a `text-3
 ```tsx
 // Transição de hover em cards e linhas de tabela
 className="transition-colors duration-150 ease-in-out"
-
-// Recolhimento da sidebar
-className="transition-[width] duration-300 ease-in-out"
 ```
+
+A largura da sidebar desktop anima em 300 ms com `cubic-bezier(0.22, 1, 0.36, 1)` no `grid-template-columns` da grade. O drawer do menu (abaixo de 980 px) entra deslizando em 420 ms com a mesma curva e sai em 280 ms. O véu do `Sheet` só faz fade. Sem essas animações o painel aparecia inteiro de uma vez, porque `animate-in` não está no build.
 
 ### 17.2 `prefers-reduced-motion`
 

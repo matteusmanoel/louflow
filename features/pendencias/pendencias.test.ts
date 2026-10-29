@@ -3,7 +3,7 @@ import { executarAcao } from '@/lib/action';
 import type { Permissoes } from '@/lib/permissions';
 import type { UsuarioSessao } from '@/lib/session';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
-import { defConfirmarRecebimento, defAdiarEntrega } from './actions';
+import { defConfirmarRecebimento, defAdiarEntrega } from './_acoes-def';
 import { listarPendencias, listarAdiamentos } from './consultas';
 
 usarBancoLimpo();

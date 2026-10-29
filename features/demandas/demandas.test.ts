@@ -6,10 +6,11 @@ import type { ZodType } from 'zod';
 import { resolverPermissoes } from '@/lib/permissions';
 import { listarDemandas, buscarDemanda, listarFilaDeFichas } from './consultas';
 import {
+  defAlterarPrioridade,
+  defAssumirFicha,
   defCriarDemanda,
   defEditarDemanda,
   defExcluirDemanda,
-  defAssumirFicha,
 } from './_acoes-def';
 
 usarBancoLimpo();
@@ -438,5 +439,58 @@ describe('editarDemanda', () => {
 
     expect(resultado.ok).toBe(false);
     expect(resultado.mensagem).toMatch(/permissão/i);
+  });
+});
+
+describe('alterarPrioridade', () => {
+  it('grava só a prioridade e registra o histórico', async () => {
+    const { id: adminId } = await criarUsuario({ perfil: 'Administrador' });
+    const u = sessao(adminId);
+    const demandaId = await criarDemandaDir({ title: 'Prioridade' });
+
+    const igual = await exec(defAlterarPrioridade, { id: demandaId, priority: 'Normal' }, u);
+    expect(igual.ok).toBe(true);
+    const historicoIgual = await sqlTeste()<{ action: string }[]>`
+      SELECT action FROM history WHERE demand_id = ${demandaId}
+    `;
+    expect(historicoIgual).toHaveLength(0);
+
+    const resultado = await exec(defAlterarPrioridade, { id: demandaId, priority: 'Urgente' }, u);
+    expect(resultado.ok).toBe(true);
+    if (!resultado.ok) return;
+    expect(resultado.mensagem).toBe('Prioridade atualizada.');
+
+    const [d] = await sqlTeste()<{ priority: string; title: string }[]>`
+      SELECT priority, title FROM demands WHERE id = ${demandaId}
+    `;
+    expect(d?.priority).toBe('Urgente');
+    expect(d?.title).toBe('Prioridade');
+
+    const [h] = await sqlTeste()<{ action: string; details: string }[]>`
+      SELECT action, details FROM history WHERE demand_id = ${demandaId}
+    `;
+    expect(h?.action).toBe('Prioridade alterada');
+    expect(h?.details).toBe('Normal → Urgente');
+  });
+
+  it('falha sem a permissão alterarPrioridade', async () => {
+    const { id: influencerId } = await criarUsuario({ perfil: 'Influencer' });
+    const u = sessao(influencerId, 'Influencer');
+    const demandaId = await criarDemandaDir({});
+
+    const resultado = await exec(defAlterarPrioridade, { id: demandaId, priority: 'Alta' }, u);
+    expect(resultado.ok).toBe(false);
+    expect(resultado.mensagem).toMatch(/permissão/i);
+  });
+
+  it('falha quando a demanda não existe', async () => {
+    const { id: adminId } = await criarUsuario({ perfil: 'Administrador' });
+    const resultado = await exec(
+      defAlterarPrioridade,
+      { id: 'LFinexistente', priority: 'Alta' },
+      sessao(adminId),
+    );
+    expect(resultado.ok).toBe(false);
+    expect(resultado.mensagem).toMatch(/não encontrada/i);
   });
 });

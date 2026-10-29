@@ -101,10 +101,16 @@ export function FormDemanda({
       if (resultado.ok) {
         mostrarFeedback(resultado);
         setSujo(false);
-        const destino = editando
-          ? `/demandas/${demanda!.id}?aba=detalhes`
-          : `/demandas/${resultado.dados.id}`;
-        router.push(destino);
+        // Edição modal: o detalhe já está no histórico. Push dessa URL
+        // faz o fecho de um painel reabrir o outro.
+        if (variante === 'modal' && editando) {
+          router.back();
+        } else {
+          const destino = editando
+            ? `/demandas/${demanda!.id}?aba=detalhes`
+            : `/demandas/${resultado.dados.id}`;
+          router.replace(destino);
+        }
         router.refresh();
       } else {
         setErro(resultado.mensagem);
@@ -118,7 +124,7 @@ export function FormDemanda({
       const resultado = await excluirDemanda({ id: demanda.id });
       mostrarFeedback(resultado);
       if (resultado.ok) {
-        router.push('/demandas');
+        router.replace('/demandas');
         router.refresh();
       } else {
         setErro(resultado.mensagem);
@@ -133,7 +139,11 @@ export function FormDemanda({
       grupo="Produção"
       sujo={sujo}
       destinoFechar={
-        editando ? `/demandas/${demanda!.id}?aba=detalhes` : variante === 'pagina' ? '/demandas' : undefined
+        variante === 'pagina'
+          ? editando
+            ? `/demandas/${demanda!.id}?aba=detalhes`
+            : '/demandas'
+          : undefined
       }
       rodape={<RodapeFormulario editando={editando} podeExcluir={podeExcluir} isPending={isPending} demanda={demanda} aoExcluir={() => void handleExcluir()} />}
     >

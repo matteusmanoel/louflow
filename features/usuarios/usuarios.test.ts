@@ -11,7 +11,7 @@ import {
   defEditarUsuario,
   defGerenciarDelegados,
   defRedefinirPin,
-} from './actions';
+} from './_acoes-def';
 import { buscarUsuario, listarUsuarios } from './consultas';
 
 usarBancoLimpo();

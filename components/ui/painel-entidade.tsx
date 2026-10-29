@@ -46,6 +46,9 @@ type Props = {
   children: ReactNode;
 };
 
+/** Um gesto (Escape no painel de cima) não pode fechar o de baixo no mesmo instante. */
+let fechoEmAndamento = false;
+
 const CLASSE_MODAL = cn(
   'flex flex-col gap-0 overflow-hidden p-0',
   'max-[980px]:inset-0 max-[980px]:h-full max-[980px]:w-full max-[980px]:max-w-none',
@@ -74,12 +77,17 @@ export function PainelEntidade({
   const tituloId = 'painel-entidade-titulo';
 
   function executarFecho() {
+    if (fechoEmAndamento) return;
+    fechoEmAndamento = true;
+    queueMicrotask(() => {
+      fechoEmAndamento = false;
+    });
     if (aoFechar) {
       aoFechar();
       return;
     }
     if (destinoFechar) {
-      router.push(destinoFechar);
+      router.replace(destinoFechar);
       return;
     }
     router.back();

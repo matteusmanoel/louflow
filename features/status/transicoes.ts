@@ -23,6 +23,22 @@ export const TRANSICOES: Record<StatusDemanda, readonly StatusDemanda[]> = {
   Cancelada: [],
 };
 
+/**
+ * Destinos que a interface pode oferecer.
+ * Concluída só sai da aprovação da entrega. Aprovação só a partir de Em execução,
+ * e só para quem registra a entrega. Os demais destinos exigem alterar o status.
+ */
+export function destinosStatus(
+  status: StatusDemanda,
+  opcoes: { podeMover: boolean; podeEntregar: boolean },
+): StatusDemanda[] {
+  return TRANSICOES[status].filter((destino) => {
+    if (destino === 'Concluída') return false;
+    if (destino === 'Aprovação') return opcoes.podeEntregar && status === 'Em execução';
+    return opcoes.podeMover;
+  });
+}
+
 /** Colunas do quadro, na ordem do fluxo. */
 export const COLUNAS_QUADRO: readonly StatusDemanda[] = [
   'Não iniciada',
