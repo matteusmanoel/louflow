@@ -1,14 +1,17 @@
 import { z } from 'zod';
+import { schemaArquivos } from '@/features/arquivos/schema';
 
 export const LINHAS_EDITORIAIS = ['Viral', 'Comunidade', 'Educacional'] as const;
 export const PROGRAMAS_ORIGEM = ['Destino Iguaçu News', 'Descubra Foz', 'Outros'] as const;
 
 export const schemaCriarCorte = z.object({
+  id: z.string().regex(/^CL[0-9A-F]{10}$/, 'Identificador inválido.').optional(),
   titulo: z.string().min(1, 'Informe o título.').max(300, 'Título muito longo.'),
   influencerId: z.string().uuid('Influencer inválido.').nullable().optional(),
   dataPostagem: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data de postagem inválida.'),
   linhaEditorial: z.enum(LINHAS_EDITORIAIS, { message: 'Linha editorial inválida.' }),
   linkVideo: z.string().url('Link do vídeo inválido.').nullable().optional(),
+  arquivos: schemaArquivos.optional(),
   programaOrigem: z.enum(PROGRAMAS_ORIGEM, { message: 'Programa de origem inválido.' }),
 });
 

@@ -5,6 +5,9 @@ import { useRef, useState, useTransition } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
 import type { Demanda } from '../consultas';
 import { criarDemanda, editarDemanda, excluirDemanda } from '../actions';
+import { CampoArquivo } from '@/features/arquivos/components/CampoArquivo';
+import type { ItemArquivo } from '@/features/arquivos/schema';
+import { novoIdPasta } from '@/lib/armazenamento-chave';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -62,6 +65,8 @@ export function FormDemanda({
   const [erro, setErro] = useState<string | null>(null);
   const [sujo, setSujo] = useState(false);
   const [formato, setFormato] = useState(demanda?.format ?? '');
+  const [idPasta] = useState(() => demanda?.id ?? novoIdPasta('LF'));
+  const [arquivos, setArquivos] = useState<ItemArquivo[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
 
   function marcarSujo() {
@@ -78,7 +83,7 @@ export function FormDemanda({
     const dados = new FormData(e.currentTarget);
 
     const entrada = {
-      ...(editando ? { id: demanda!.id } : {}),
+      ...(editando ? { id: demanda!.id } : { id: idPasta }),
       title: dados.get('title') as string,
       format: dados.get('format') as string,
       influencer_id: sentinela(dados.get('influencer_id'), 'nenhum'),
@@ -88,6 +93,7 @@ export function FormDemanda({
       post_date: (dados.get('post_date') as string) || null,
       info: (dados.get('info') as string) || null,
       link: (dados.get('link') as string) || null,
+      arquivos,
       editorial_line: sentinela(dados.get('editorial_line'), 'nenhum') as 'Viral' | 'Comunidade' | 'Educacional' | null,
       source_program: (dados.get('source_program') as string) || null,
       clips_count: dados.get('clips_count') ? Number(dados.get('clips_count')) : null,
@@ -274,17 +280,21 @@ export function FormDemanda({
         </div>
       </div>
 
-      {/* Link */}
-      <div className="space-y-1.5">
-        <Label htmlFor="link">Link externo</Label>
-        <Input
-          id="link"
-          name="link"
-          type="url"
-          placeholder="https://drive.google.com/…"
-          defaultValue={demanda?.link ?? ''}
-        />
-      </div>
+      <CampoArquivo
+        id="link"
+        name="link"
+        rotulo="Link externo"
+        grupo="demandas"
+        donoId={idPasta}
+        valorInicial={demanda?.link ?? ''}
+        aoMudar={marcarSujo}
+        arquivos={arquivos}
+        aoMudarArquivos={(lista) => {
+          setArquivos(lista);
+          marcarSujo();
+        }}
+        placeholder="https://drive.google.com/…"
+      />
 
       {/* Campos de Cortes */}
       {ehCortes && (

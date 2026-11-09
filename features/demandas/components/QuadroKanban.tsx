@@ -8,8 +8,9 @@ import { COLUNAS_QUADRO, TRANSICOES, destinosStatus } from '@/features/status/tr
 import { alterarStatusDemanda } from '@/features/status/actions';
 import { registrarEntrega } from '@/features/aprovacoes/actions';
 import { BadgePrioridade } from './BadgePrioridade';
+import { CampoArquivo } from '@/features/arquivos/components/CampoArquivo';
+import type { ItemArquivo } from '@/features/arquivos/schema';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -44,6 +45,7 @@ export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }:
   const [pendente, startTransition] = useTransition();
   const [entrega, setEntrega] = useState<Demanda | null>(null);
   const [linkEntrega, setLinkEntrega] = useState('');
+  const [arquivosEntrega, setArquivosEntrega] = useState<ItemArquivo[]>([]);
   const [obsEntrega, setObsEntrega] = useState('');
   const [cancelamento, setCancelamento] = useState<Demanda | null>(null);
   const [motivo, setMotivo] = useState('');
@@ -82,6 +84,7 @@ export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }:
         return;
       }
       setLinkEntrega('');
+      setArquivosEntrega([]);
       setObsEntrega('');
       setEntrega(demanda);
       return;
@@ -117,7 +120,8 @@ export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }:
     if (!entrega) return;
     const resultado = await registrarEntrega({
       demandaId: entrega.id,
-      arquivoUrl: linkEntrega,
+      arquivoUrl: linkEntrega || arquivosEntrega[0]?.url || '',
+      arquivos: arquivosEntrega,
       observacoes: obsEntrega || undefined,
     });
     mostrarFeedback(resultado);
@@ -206,17 +210,19 @@ export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }:
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="entrega-link">Link do arquivo</Label>
-              <Input
+            {entrega && (
+              <CampoArquivo
                 id="entrega-link"
-                type="url"
-                value={linkEntrega}
-                onChange={(evento) => setLinkEntrega(evento.target.value)}
+                rotulo="Link do arquivo"
+                grupo="demandas"
+                donoId={entrega.id}
+                valor={linkEntrega}
+                aoMudar={setLinkEntrega}
+                arquivos={arquivosEntrega}
+                aoMudarArquivos={setArquivosEntrega}
                 placeholder="https://"
-                required
               />
-            </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="entrega-obs">Observação</Label>
               <Textarea
@@ -233,7 +239,7 @@ export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }:
             </Button>
             <Button
               type="button"
-              disabled={pendente || !linkEntrega}
+              disabled={pendente || (!linkEntrega && arquivosEntrega.length === 0)}
               onClick={() => {
                 startTransition(() => { void confirmarEntrega(); });
               }}

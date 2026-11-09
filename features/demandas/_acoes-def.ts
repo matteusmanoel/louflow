@@ -15,6 +15,7 @@ import {
   type EntradaExcluirDemanda,
 } from './schema';
 import type { Tx } from '@/lib/db';
+import { gravarArquivosDemanda } from '@/features/arquivos/gravar';
 
 const FORMATO_CORTES = 'Cortes';
 
@@ -32,7 +33,11 @@ export const defCriarDemanda: DefinicaoAcao<typeof schemaCriarDemanda, { id: str
   schema: schemaCriarDemanda,
   permissao: 'criarDemandas',
   executar: async ({ tx, usuario, entrada, notificar }) => {
-    const id = novoId('LF');
+    const id = entrada.id ?? novoId('LF');
+    if (entrada.id) {
+      const [existe] = await tx<{ id: string }[]>`SELECT id FROM demands WHERE id = ${entrada.id} LIMIT 1`;
+      if (existe) throw new ErroDominio('Não foi possível criar a Demanda. Tente novamente.');
+    }
     let editorId: string | null = entrada.editor_id ?? null;
 
     if (entrada.format === FORMATO_CORTES) {
@@ -76,6 +81,12 @@ export const defCriarDemanda: DefinicaoAcao<typeof schemaCriarDemanda, { id: str
         ${usuario.id}
       )
     `;
+
+    await gravarArquivosDemanda(tx, {
+      demandaId: id,
+      usuarioId: usuario.id,
+      arquivos: entrada.arquivos ?? [],
+    });
 
     await registrarHistorico(tx, {
       demandaId: id,
@@ -149,6 +160,12 @@ export const defEditarDemanda: DefinicaoAcao<typeof schemaEditarDemanda, { id: s
         updated_at     = now()
       WHERE id = ${entrada.id}
     `;
+
+    await gravarArquivosDemanda(tx, {
+      demandaId: entrada.id,
+      usuarioId: usuario.id,
+      arquivos: entrada.arquivos ?? [],
+    });
 
     await registrarHistorico(tx, {
       demandaId: entrada.id,

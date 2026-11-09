@@ -4,6 +4,9 @@ import { useTransition, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { criarCorte } from '../actions';
 import { LINHAS_EDITORIAIS, PROGRAMAS_ORIGEM } from '../schema';
+import { CampoArquivo } from '@/features/arquivos/components/CampoArquivo';
+import type { ItemArquivo } from '@/features/arquivos/schema';
+import { novoIdPasta } from '@/lib/armazenamento-chave';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +18,8 @@ import { mostrarFeedback } from '@/lib/toast';
 export function FormCriarCorte({ aoSalvar }: { aoSalvar?: () => void }) {
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
+  const [idCorte, setIdCorte] = useState(() => novoIdPasta('CL'));
+  const [arquivos, setArquivos] = useState<ItemArquivo[]>([]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,17 +29,21 @@ export function FormCriarCorte({ aoSalvar }: { aoSalvar?: () => void }) {
 
     startTransition(async () => {
       const resultado = await criarCorte({
+        id: idCorte,
         titulo: fd.get('titulo') as string,
         influencerId: (fd.get('influencerId') as string) || null,
         dataPostagem: fd.get('dataPostagem') as string,
         linhaEditorial: fd.get('linhaEditorial') as (typeof LINHAS_EDITORIAIS)[number],
         linkVideo: (fd.get('linkVideo') as string) || null,
+        arquivos,
         programaOrigem: fd.get('programaOrigem') as (typeof PROGRAMAS_ORIGEM)[number],
       });
 
       mostrarFeedback(resultado);
       if (resultado.ok) {
         form.reset();
+        setArquivos([]);
+        setIdCorte(novoIdPasta('CL'));
         aoSalvar?.();
       } else {
         setErro(resultado.mensagem);
@@ -103,10 +112,16 @@ export function FormCriarCorte({ aoSalvar }: { aoSalvar?: () => void }) {
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="linkVideo">Link do Vídeo (opcional)</Label>
-        <Input id="linkVideo" name="linkVideo" type="url" placeholder="https://drive.google.com/…" />
-      </div>
+      <CampoArquivo
+        id="linkVideo"
+        name="linkVideo"
+        rotulo="Link do Vídeo (opcional)"
+        grupo="cortes"
+        donoId={idCorte}
+        arquivos={arquivos}
+        aoMudarArquivos={setArquivos}
+        placeholder="https://drive.google.com/…"
+      />
 
       <RodapeAcoes
         primaria={

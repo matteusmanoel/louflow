@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Scissors } from 'lucide-react';
 import type { Corte } from '../consultas';
+import { nomeDaUrl } from '@/lib/armazenamento-chave';
 import { FormConcluirCorte } from './FormConcluirCorte';
 import { AcoesLinha } from '@/components/ui/acoes-linha';
 import { Badge } from '@/components/ui/badge';
@@ -72,19 +73,32 @@ export function ListaCortes({
           <tbody>
             {cortes.map((c) => (
               <tr key={c.id} className="group transition-colors hover:bg-[var(--tabela-linha-hover)]">
-                <Td className="max-w-[16rem] truncate">
-                  {c.linkVideo ? (
-                    <a
-                      href={c.linkVideo}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-[var(--loumar-700)] hover:underline"
-                    >
-                      {c.titulo}
-                    </a>
-                  ) : (
-                    c.titulo
-                  )}
+                <Td className="max-w-[16rem]">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    {c.linkVideo ? (
+                      <a
+                        href={c.linkVideo}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate font-semibold text-[var(--loumar-700)] hover:underline"
+                      >
+                        {c.titulo}
+                      </a>
+                    ) : (
+                      <span className="truncate">{c.titulo}</span>
+                    )}
+                    {c.linksVideo.map((url) => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate text-xs text-[var(--loumar-700)] hover:underline"
+                      >
+                        {nomeDaUrl(url)}
+                      </a>
+                    ))}
+                  </div>
                 </Td>
                 <Td className="whitespace-nowrap">{LABEL_PROGRAMA[c.programaOrigem] ?? c.programaOrigem}</Td>
                 <Td>

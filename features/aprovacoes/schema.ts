@@ -1,8 +1,10 @@
 import { z } from 'zod';
+import { schemaArquivos } from '@/features/arquivos/schema';
 
 export const schemaRegistrarEntrega = z.object({
   demandaId: z.string().min(1, 'ID da Demanda obrigatório.'),
   arquivoUrl: z.string().url('URL do arquivo inválida.'),
+  arquivos: schemaArquivos.optional(),
   observacoes: z.string().max(1000, 'Observações muito longas.').optional(),
 });
 

@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
+import { linkAcessivel } from '@/lib/armazenamento';
 import { exigirModulo } from '@/lib/auth';
+import { listarArquivosDemanda } from '@/features/arquivos/consultas';
+import { ListaLinksArquivo } from '@/features/arquivos/components/ListaLinksArquivo';
 import { formatarData } from '@/lib/datas';
 import { carregarDemandaPagina } from '@/features/demandas/consultas';
 import {
@@ -57,6 +60,16 @@ export async function VistaDemanda({
 
   const abaAtiva = abaValida(aba);
   const podeEditar = usuario.permissoes.editarDemandas;
+  const linkExterno = await linkAcessivel(demanda.link);
+  const arquivosDemanda = await Promise.all(
+    (await listarArquivosDemanda(demanda.id))
+      .filter((arquivo) => arquivo.entregaId == null)
+      .map(async (arquivo) => ({
+        id: arquivo.id,
+        nome: arquivo.nome,
+        url: (await linkAcessivel(arquivo.url)) ?? arquivo.url,
+      })),
+  );
 
   return (
     <PainelEntidade
@@ -94,15 +107,18 @@ export async function VistaDemanda({
               {demanda.editorial_line && <Detalhe rotulo="Linha Editorial" valor={demanda.editorial_line} />}
               {demanda.source_program && <Detalhe rotulo="Programa" valor={demanda.source_program} />}
               {demanda.clips_count && <Detalhe rotulo="Cortes" valor={`${demanda.clips_count} cortes`} />}
-              {demanda.link && (
+              {linkExterno && (
                 <Detalhe
                   rotulo="Link"
                   valor={
-                    <a href={demanda.link} target="_blank" rel="noopener noreferrer">
+                    <a href={linkExterno} target="_blank" rel="noopener noreferrer">
                       Abrir link
                     </a>
                   }
                 />
+              )}
+              {arquivosDemanda.length > 0 && (
+                <Detalhe rotulo="Arquivos" valor={<ListaLinksArquivo arquivos={arquivosDemanda} />} />
               )}
             </div>
             {demanda.info && (

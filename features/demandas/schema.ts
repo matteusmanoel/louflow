@@ -1,10 +1,12 @@
 import { z } from 'zod';
+import { schemaArquivos } from '@/features/arquivos/schema';
 
 export const STATUSES_FINAIS = ['Concluída', 'Cancelada', 'Reprovada'] as const;
 export const STATUS_APROVACAO = 'Aprovação' as const;
 export const STATUSES_NAO_ATRASADOS = [...STATUSES_FINAIS, STATUS_APROVACAO] as const;
 
 export const schemaCriarDemanda = z.object({
+  id: z.string().regex(/^LF[0-9A-F]{10}$/, 'Identificador inválido.').optional(),
   title: z.string().trim().min(1, 'Informe o título.').max(300),
   format: z.string().trim().min(1, 'Informe o formato.'),
   influencer_id: z.string().uuid().nullable().optional(),
@@ -19,6 +21,7 @@ export const schemaCriarDemanda = z.object({
     .nullable()
     .optional()
     .or(z.literal('').transform(() => null)),
+  arquivos: schemaArquivos.optional(),
   editorial_line: z.enum(['Viral', 'Comunidade', 'Educacional']).nullable().optional(),
   source_program: z.string().max(200).nullable().optional(),
   clips_count: z.number().int().min(1).max(999).nullable().optional(),
@@ -40,6 +43,7 @@ export const schemaEditarDemanda = z.object({
     .nullable()
     .optional()
     .or(z.literal('').transform(() => null)),
+  arquivos: schemaArquivos.optional(),
   editorial_line: z.enum(['Viral', 'Comunidade', 'Educacional']).nullable().optional(),
   source_program: z.string().max(200).nullable().optional(),
   clips_count: z.number().int().min(1).max(999).nullable().optional(),

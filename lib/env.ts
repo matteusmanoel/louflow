@@ -21,4 +21,11 @@ export const env = {
   get producao() {
     return process.env.NODE_ENV === 'production';
   },
+  /** Bucket privado de arquivos. Ausente = a tela só aceita link externo. */
+  get armazenamento() {
+    const bucket = process.env.S3_BUCKET?.trim() ?? '';
+    if (!bucket) return null;
+    const regiao = process.env.AWS_REGION?.trim() || process.env.AWS_DEFAULT_REGION?.trim() || 'us-east-1';
+    return { bucket, regiao };
+  },
 };

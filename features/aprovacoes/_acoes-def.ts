@@ -2,6 +2,7 @@ import 'server-only';
 import type { DefinicaoAcao } from '@/lib/action';
 import { ErroDominio } from '@/lib/errors';
 import { transicionarStatus } from '@/features/status/index';
+import { gravarArquivosDemanda } from '@/features/arquivos/gravar';
 import {
   schemaRegistrarEntrega,
   schemaAprovarEntrega,
@@ -43,6 +44,13 @@ export const defRegistrarEntrega: DefinicaoAcao<
         ${demanda.editor_id ?? usuario.id},
         'Aguardando aprovação'
       )`;
+
+    await gravarArquivosDemanda(tx, {
+      demandaId: entrada.demandaId,
+      entregaId,
+      usuarioId: usuario.id,
+      arquivos: entrada.arquivos ?? [],
+    });
 
     await transicionarStatus(tx, {
       demandaId: entrada.demandaId,

@@ -1,3 +1,4 @@
+import { linkAcessivel } from '@/lib/armazenamento';
 import { exigirModulo } from '@/lib/auth';
 import { listarCortes } from '@/features/cortes/consultas';
 import { ListaCortes } from '@/features/cortes/components/ListaCortes';
@@ -8,7 +9,17 @@ import { ContainerPagina } from '@/components/ui/container-pagina';
 
 export default async function PaginaCortes() {
   const usuario = await exigirModulo('cortes');
-  const cortes = await listarCortes();
+  const cortes = await Promise.all(
+    (await listarCortes()).map(async (corte) => ({
+      ...corte,
+      linkVideo: await linkAcessivel(corte.linkVideo),
+      linksVideo: await Promise.all(
+        corte.linksVideo
+          .filter((url) => url !== corte.linkVideo)
+          .map(async (url) => (await linkAcessivel(url)) ?? url),
+      ),
+    })),
+  );
   const podeGerenciar = usuario.permissoes.editorPadraoCortes;
 
   return (

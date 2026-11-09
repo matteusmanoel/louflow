@@ -5,6 +5,7 @@ import type { UsuarioSessao } from '@/lib/session';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
 import { defRegistrarEntrega, defAprovarEntrega, defReprovarEntrega } from './_acoes-def';
 import { listarAprovacoes, listarEntregasDemanda } from './consultas';
+import { montarChave, urlDoObjeto } from '@/lib/armazenamento-chave';
 
 usarBancoLimpo();
 
@@ -97,6 +98,72 @@ describe('registrarEntrega', () => {
 
     const [del] = await sql<{ status: string }[]>`SELECT status FROM deliveries WHERE demand_id = ${demandaId}`;
     expect(del?.status).toBe('Aguardando aprovação');
+  });
+
+  it('grava vários arquivos na pasta da Demanda e recusa arquivo de outra', async () => {
+    process.env.S3_BUCKET = 'louflow-app-private-796576080439';
+    process.env.AWS_REGION = 'us-east-1';
+    try {
+      const { id: editorId } = await criarUsuario({ perfil: 'Editor' });
+      const demandaId = await criarDemanda('Em execução', editorId);
+      const editor = sessao(editorId, { editarDemandas: true });
+      const item = (nome: string, idArquivo: string, dono = demandaId) => {
+        const chave = montarChave('demandas', dono, nome, idArquivo);
+        return {
+          url: urlDoObjeto('louflow-app-private-796576080439', 'us-east-1', chave),
+          nome,
+          tipo: 'video/mp4' as const,
+          tamanho: 1024,
+        };
+      };
+      const arquivos = [
+        item('dois.mp4', '22222222-2222-4222-8222-222222222222'),
+        item('um.mp4', '11111111-1111-4111-8111-111111111111'),
+      ];
+
+      const res = await executarAcao(
+        defRegistrarEntrega,
+        { demandaId, arquivoUrl: arquivos[0]!.url, arquivos },
+        deps(editor),
+      );
+      expect(res.ok).toBe(true);
+
+      const linhas = await sqlTeste()<{ file_name: string }[]>`
+        SELECT file_name FROM demand_files WHERE demand_id = ${demandaId} ORDER BY file_name`;
+      expect(linhas.map((linha) => linha.file_name)).toEqual(['dois.mp4', 'um.mp4']);
+    } finally {
+      delete process.env.S3_BUCKET;
+      delete process.env.AWS_REGION;
+    }
+  });
+
+  it('recusa arquivo de outra Demanda', async () => {
+    process.env.S3_BUCKET = 'louflow-app-private-796576080439';
+    process.env.AWS_REGION = 'us-east-1';
+    try {
+      const { id: editorId } = await criarUsuario({ perfil: 'Editor' });
+      const demandaId = await criarDemanda('Em execução', editorId);
+      const editor = sessao(editorId, { editarDemandas: true });
+      const chave = montarChave('demandas', 'LF0000000999', 'outro.mp4', '33333333-3333-4333-8333-333333333333');
+      const alheio = await executarAcao(
+        defRegistrarEntrega,
+        {
+          demandaId,
+          arquivoUrl: 'https://drive.example.com/file/alheio',
+          arquivos: [{
+            url: urlDoObjeto('louflow-app-private-796576080439', 'us-east-1', chave),
+            nome: 'outro.mp4',
+            tipo: 'video/mp4' as const,
+            tamanho: 1024,
+          }],
+        },
+        deps(editor),
+      );
+      expect(alheio).toMatchObject({ ok: false, mensagem: 'O arquivo não pertence a esta Demanda.' });
+    } finally {
+      delete process.env.S3_BUCKET;
+      delete process.env.AWS_REGION;
+    }
   });
 
   it('falha se status não é Em execução', async () => {

@@ -10,6 +10,7 @@ export type Corte = {
   dataPostagem: string;
   linhaEditorial: string;
   linkVideo: string | null;
+  linksVideo: string[];
   programaOrigem: string;
   status: string;
   quantidadeProduzida: number | null;
@@ -31,6 +32,7 @@ export async function listarCortes(): Promise<Corte[]> {
       post_date: Date;
       editorial_line: string;
       video_link: string | null;
+      video_links: string[] | null;
       source_program: string;
       status: string;
       clips_count: number | null;
@@ -48,6 +50,7 @@ export async function listarCortes(): Promise<Corte[]> {
       c.post_date,
       c.editorial_line,
       c.video_link,
+      c.video_links,
       c.source_program,
       c.status,
       c.clips_count,
@@ -69,6 +72,7 @@ export async function listarCortes(): Promise<Corte[]> {
     dataPostagem: l.post_date instanceof Date ? l.post_date.toISOString().slice(0, 10) : String(l.post_date),
     linhaEditorial: l.editorial_line,
     linkVideo: l.video_link,
+    linksVideo: l.video_links ?? [],
     programaOrigem: l.source_program,
     status: l.status,
     quantidadeProduzida: l.clips_count,

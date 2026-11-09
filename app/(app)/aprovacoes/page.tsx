@@ -1,5 +1,8 @@
+import { linkAcessivel } from '@/lib/armazenamento';
 import { exigirModulo } from '@/lib/auth';
 import { listarAprovacoes } from '@/features/aprovacoes/consultas';
+import { listarArquivosEntregas } from '@/features/arquivos/consultas';
+import { ListaLinksArquivo } from '@/features/arquivos/components/ListaLinksArquivo';
 import { Button } from '@/components/ui/button';
 import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +12,25 @@ import { ClipboardCheck } from 'lucide-react';
 
 export default async function PaginaAprovacoes() {
   const usuario = await exigirModulo('aprovacoes');
-  const aprovacoes = await listarAprovacoes(usuario);
+  const aprovacoesBrutas = await listarAprovacoes(usuario);
+  const arquivos = await listarArquivosEntregas(aprovacoesBrutas.map((item) => item.entregaId));
+  const aprovacoes = await Promise.all(
+    aprovacoesBrutas.map(async (item) => {
+      const daEntrega = arquivos.filter((arquivo) => arquivo.entregaId === item.entregaId);
+      return {
+        ...item,
+        link: (await linkAcessivel(item.link)) ?? item.link,
+        arquivos: await Promise.all(
+          daEntrega.map(async (arquivo) => ({
+            id: arquivo.id,
+            nome: arquivo.nome,
+            url: (await linkAcessivel(arquivo.url)) ?? arquivo.url,
+          })),
+        ),
+        principalListado: daEntrega.some((arquivo) => arquivo.url === item.link),
+      };
+    }),
+  );
 
   return (
     <ContainerPagina>
@@ -33,17 +54,20 @@ export default async function PaginaAprovacoes() {
                       {a.editorNome ? <span> · {a.editorNome}</span> : null}
                     </CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={a.link} target="_blank" rel="noopener noreferrer">
-                      Ver arquivo
-                    </a>
-                  </Button>
+                  {!a.principalListado && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={a.link} target="_blank" rel="noopener noreferrer">
+                        Ver arquivo
+                      </a>
+                    </Button>
+                  )}
                 </CardHeader>
-                {a.nota ? (
-                  <CardContent>
-                    <p className="m-0 text-sm text-[var(--texto-suave)]">{a.nota}</p>
+                {(a.arquivos.length > 0 || a.nota) && (
+                  <CardContent className="flex flex-col gap-3">
+                    <ListaLinksArquivo arquivos={a.arquivos} />
+                    {a.nota ? <p className="m-0 text-sm text-[var(--texto-suave)]">{a.nota}</p> : null}
                   </CardContent>
-                ) : null}
+                )}
               </Card>
             </li>
           ))}

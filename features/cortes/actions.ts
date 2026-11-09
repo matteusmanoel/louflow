@@ -2,6 +2,7 @@
 
 import { criarAcao } from '@/lib/action';
 import { ErroDominio } from '@/lib/errors';
+import { urlsDoDono } from '@/features/arquivos/gravar';
 import { schemaCriarCorte, schemaConcluirCorte } from './schema';
 
 function gerarId(): string {
@@ -17,12 +18,15 @@ export const criarCorte = criarAcao({
   schema: schemaCriarCorte,
   permissao: 'editorPadraoCortes',
   executar: async ({ tx, usuario, entrada }) => {
-    const id = gerarId();
+    const id = entrada.id ?? gerarId();
+    const arquivos = entrada.arquivos ?? [];
+    if (arquivos.length > 0) urlsDoDono(arquivos, 'cortes', id);
+    const linkPrincipal = entrada.linkVideo ?? arquivos[0]?.url ?? null;
 
     await tx`
       INSERT INTO clips (
         id, title, influencer_id, editor_id, post_date,
-        editorial_line, video_link, source_program,
+        editorial_line, video_link, video_links, source_program,
         status, created_by, started_at
       ) VALUES (
         ${id},
@@ -31,7 +35,8 @@ export const criarCorte = criarAcao({
         ${usuario.id},
         ${entrada.dataPostagem},
         ${entrada.linhaEditorial},
-        ${entrada.linkVideo ?? null},
+        ${linkPrincipal},
+        ${tx.array(arquivos.map((arquivo) => arquivo.url), 1009)},
         ${entrada.programaOrigem},
         'Em andamento',
         ${usuario.id},
