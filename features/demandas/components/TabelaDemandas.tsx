@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, type SyntheticEvent } from 'react';
+import { useRef, useState, useTransition, type SyntheticEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Demanda, DemandaPrioridade, DemandaStatus } from '../consultas';
@@ -11,8 +11,7 @@ import { alterarPrioridadeDemanda } from '../actions';
 import { BadgePrioridade } from './BadgePrioridade';
 import { BadgeStatus } from './BadgeStatus';
 import { TabelaWrapper, Td, Th } from '@/components/ui/tabela';
-import { CampoArquivo } from '@/features/arquivos/components/CampoArquivo';
-import type { ItemArquivo } from '@/features/arquivos/schema';
+import { CampoArquivo, type CampoArquivoHandle } from '@/features/arquivos/components/CampoArquivo';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -63,7 +62,8 @@ export function TabelaDemandas({
   const [pendente, startTransition] = useTransition();
   const [entrega, setEntrega] = useState<Demanda | null>(null);
   const [linkEntrega, setLinkEntrega] = useState('');
-  const [arquivosEntrega, setArquivosEntrega] = useState<ItemArquivo[]>([]);
+  const [quantidadeArquivos, setQuantidadeArquivos] = useState(0);
+  const campoEntrega = useRef<CampoArquivoHandle>(null);
   const [obsEntrega, setObsEntrega] = useState('');
   const [cancelamento, setCancelamento] = useState<Demanda | null>(null);
   const [motivo, setMotivo] = useState('');
@@ -102,7 +102,7 @@ export function TabelaDemandas({
         return;
       }
       setLinkEntrega('');
-      setArquivosEntrega([]);
+      setQuantidadeArquivos(0);
       setObsEntrega('');
       setEntrega(demanda);
       return;
@@ -136,13 +136,15 @@ export function TabelaDemandas({
   }
 
   async function confirmarEntrega() {
-    if (!entrega) return;
-    const resultado = await registrarEntrega({
-      demandaId: entrega.id,
-      arquivoUrl: linkEntrega || arquivosEntrega[0]?.url || '',
-      arquivos: arquivosEntrega,
-      observacoes: obsEntrega || undefined,
-    });
+    if (!entrega || !campoEntrega.current) return;
+    const resultado = await campoEntrega.current.enviar((arquivos) =>
+      registrarEntrega({
+        demandaId: entrega.id,
+        arquivoUrl: linkEntrega || arquivos[0]?.url || '',
+        arquivos,
+        observacoes: obsEntrega || undefined,
+      }),
+    );
     mostrarFeedback(resultado);
     if (resultado.ok) {
       setEntrega(null);
@@ -280,14 +282,14 @@ export function TabelaDemandas({
           <div className="space-y-3">
             {entrega && (
               <CampoArquivo
+                ref={campoEntrega}
                 id="entrega-link-lista"
                 rotulo="Link do arquivo"
                 grupo="demandas"
                 donoId={entrega.id}
                 valor={linkEntrega}
                 aoMudar={setLinkEntrega}
-                arquivos={arquivosEntrega}
-                aoMudarArquivos={setArquivosEntrega}
+                aoMudarPendentes={(lista) => setQuantidadeArquivos(lista.length)}
                 placeholder="https://"
               />
             )}
@@ -307,7 +309,7 @@ export function TabelaDemandas({
             </Button>
             <Button
               type="button"
-              disabled={pendente || (!linkEntrega && arquivosEntrega.length === 0)}
+              disabled={pendente || (!linkEntrega && quantidadeArquivos === 0)}
               onClick={() => {
                 startTransition(() => { void confirmarEntrega(); });
               }}

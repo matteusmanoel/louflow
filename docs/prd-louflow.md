@@ -33,7 +33,7 @@ Reescrever o LouFlow mantendo **paridade funcional** com a produção atual, num
 2. **Lançamento único.** Todos os módulos entram no MVP. As fases definem **ordem de construção**, não lançamentos separados. A virada é *big bang* (P5).
 3. **Sem nomes no código.** Toda regra hoje amarrada a uma pessoa vira Permissão ou configuração (D9).
 4. **Custo zero no MVP.** Usar o plano gratuito de cada serviço. Custo novo exige aprovação da gerência.
-5. **Links continuam links.** Material bruto e Entregas seguem como URLs externas (Drive, WeTransfer). O LouFlow não hospeda arquivos.
+5. **Links continuam links.** Material bruto e Entregas seguem como URLs externas (Drive, WeTransfer). A exceção é o Drive da equipe: arquivos no bucket, com pastas, lixeira de 30 dias e cota. Não há link público de compartilhamento.
 
 ## 4. Escopo por fase
 
@@ -53,7 +53,7 @@ Ordem de construção: as primeiras dependências ficam no topo.
 
 #### 4.2 Usuários e Permissões
 
-- CRUD de Usuários por quem tem `gerenciarUsuarios`. Cada Usuário tem nome, e-mail, Perfil, vínculo de editor (o nome exibido nas Demandas) e situação ativo/inativo.
+- CRUD de Usuários por quem tem `gerenciarUsuarios`. Cada Usuário tem nome, e-mail, Perfil, vínculo de editor (o nome exibido nas Demandas), telefone opcional para menção no grupo e situação ativo/inativo.
 - Redefinir PIN de um Usuário.
 - Desligar um Usuário: as Demandas dele em execução ou pausadas voltam para Não iniciada, e as que estão em Aprovação são preservadas.
 - Permissões granulares. Hoje são **20 chaves** mais a lista de Aprovadores Delegados:
@@ -92,7 +92,7 @@ Efeitos obrigatórios de cada transição, todos na mesma unidade atômica:
 - Entregas pendentes são reconciliadas com o novo Status.
 - Uma entrada é gravada no Histórico.
 - Ação administrativa grava Auditoria Administrativa, com o estado antes e depois.
-- **Depois de confirmada a mudança**, a notificação vai por e-mail, conforme as preferências do destinatário. Uma falha de e-mail não desfaz a transição.
+- **Depois de confirmada a mudança**, só o destino "Ajustes solicitados" avisa o grupo. As demais mudanças ficam no Histórico. Uma falha de envio não desfaz a transição.
 
 O relógio de tempo ativo é exibido em tempo real no cliente.
 
@@ -127,7 +127,7 @@ O relógio de tempo ativo é exibido em tempo real no cliente.
 - O painel de pendências do Influencer lista as Aprovações e os Agendamentos Obrigatórios em aberto.
 - **Na produção, essas pendências não bloqueiam ações no servidor**; a regra está desligada no código. A reescrita preserva esse comportamento (P2).
 - O Influencer pode registrar um Adiamento de **5 min a 48 h**, com motivo de **8 a 500 caracteres**.
-- Pendência sem resposta nem Adiamento recebe prazo padrão de **24 h**. Vencido o prazo, o Influencer e a administração são avisados por e-mail.
+- Pendência sem resposta nem Adiamento recebe prazo padrão de **24 h**, ajustável pelo admin. Vencido o prazo, o grupo do setor é avisado no horário configurado.
 - A verificação roda a cada **15 min** (Fase 1 porque alimenta a Aprovação; o mecanismo está no system design).
 
 #### 4.10 Captação
@@ -172,11 +172,13 @@ O relógio de tempo ativo é exibido em tempo real no cliente.
 - Consulta da Auditoria Administrativa.
 - Erros do cliente registrados no servidor, sem dados pessoais.
 
-#### 4.16 Notificações por e-mail
+#### 4.16 Avisos no WhatsApp
 
-- Preferências por Usuário: editor atribuído, mudança de status, novo comentário, solicitação de ajuste, conclusão/aprovação, prazo próximo.
-- Alerta diário de prazo às **08:00 (America/Sao_Paulo)** para Demandas a **até 2 dias** do prazo, agrupadas por Editor.
-- Provedor de e-mail: Resend (P5). O sistema continua funcionando se a cota de e-mail acabar.
+- O grupo do setor é o canal. Não há opt-out individual. O e-mail previsto em P5 foi substituído por este canal.
+- Saem na hora: editor atribuído, ajuste solicitado e aprovação da entrega. Quem precisa agir é mencionado quando o cadastro tem telefone.
+- Prazo e pendência do influencer saem no horário e no intervalo que o admin configura. O padrão é 08:00, America/Sao_Paulo, antecedência de 2 dias e folga de 24 h.
+- Status e comentário ficam na demanda. O sistema continua funcionando se o envio falhar.
+- O grupo só recebe mensagem com a liberação explícita de produção. Antes disso o destino é a conversa de teste.
 
 ### Fase 2 — Ferramentas de gestão
 
@@ -197,7 +199,7 @@ O relógio de tempo ativo é exibido em tempo real no cliente.
 - Login com Google (OAuth). Fica como adição futura (D3).
 - Migração para AWS. Pode acontecer no futuro, com aprovação da gerência (D5).
 - Integração com APIs de plataformas de postagem (Instagram, TikTok, YouTube).
-- Upload e armazenamento de arquivos de vídeo.
+- Upload e armazenamento de arquivos fora do Drive da equipe.
 - Backup por cópia de tabela. O backup gerenciado do banco substitui as abas `Backup_*`, e as 71 abas de backup **não** migram.
 - Tempo real via WebSocket (D6).
 - App mobile nativo.
@@ -211,7 +213,7 @@ O relógio de tempo ativo é exibido em tempo real no cliente.
 | Atualização da TV | Dado com no máximo 15 s de defasagem |
 | Fuso | Todas as datas exibidas e calculadas em America/Sao_Paulo |
 | Dados pessoais | Nenhum PIN legível; nenhum e-mail na TV nem em logs |
-| Custo | Plano gratuito de Vercel, Neon, Resend e do agendador externo |
+| Custo | Plano gratuito de Vercel, Neon e do agendador externo. O WhatsApp usa a instância uazapi já existente |
 
 ## 7. Decisões (aceitas em 21 out 2026)
 

@@ -5,6 +5,7 @@ import { BotaoPublicacao } from './BotaoPublicacao';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EstadoVazio } from '@/components/ui/estado-vazio';
+import { cn } from '@/lib/utils';
 
 function agrupar(artigos: ArtigoWiki[]): { categoria: string; artigos: ArtigoWiki[] }[] {
   const grupos: { categoria: string; artigos: ArtigoWiki[] }[] = [];
@@ -16,7 +17,15 @@ function agrupar(artigos: ArtigoWiki[]): { categoria: string; artigos: ArtigoWik
   return grupos;
 }
 
-export function ListaArtigos({ artigos, podeGerir }: { artigos: ArtigoWiki[]; podeGerir: boolean }) {
+export function ListaArtigos({
+  artigos,
+  podeGerir,
+  selecionadoId,
+}: {
+  artigos: ArtigoWiki[];
+  podeGerir: boolean;
+  selecionadoId?: string;
+}) {
   if (artigos.length === 0) {
     return (
       <EstadoVazio
@@ -47,12 +56,16 @@ export function ListaArtigos({ artigos, podeGerir }: { artigos: ArtigoWiki[]; po
             {grupo.artigos.map((artigo) => (
               <li
                 key={artigo.id}
-                className="min-w-0 rounded-[var(--raio-card)] border border-[var(--borda-app)] bg-[var(--superficie)] p-4 shadow-[var(--sombra-card)]"
+                className={cn(
+                  'min-w-0 rounded-[var(--raio-card)] border border-[var(--borda-app)] bg-[var(--superficie)] p-4 shadow-[var(--sombra-card)]',
+                  artigo.id === selecionadoId && 'border-[var(--loumar-600)] bg-[var(--loumar-100)]',
+                )}
               >
                 <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <Link
-                      href={`/wiki/${artigo.id}`}
+                      href={`/wiki?artigo=${encodeURIComponent(artigo.id)}`}
+                      aria-current={artigo.id === selecionadoId ? 'page' : undefined}
                       className="text-base font-semibold text-[var(--texto-forte)] underline-offset-4 hover:underline"
                     >
                       {artigo.title}

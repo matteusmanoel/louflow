@@ -1,7 +1,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { z } from 'zod';
 import { criarAcao } from '@/lib/action';
 import { registrarAuditoria } from '@/lib/audit';
@@ -29,30 +29,35 @@ function destinoSeguro(valor: string | undefined): string {
 }
 
 export async function entrar(_anterior: EstadoFormulario, form: FormData): Promise<EstadoFormulario> {
-  const entrada = schemaLogin.safeParse({
-    email: form.get('email'),
-    pin: form.get('pin'),
-    lembrar: form.get('lembrar') === 'on',
-    para: form.get('para') ?? undefined,
-  });
-  if (!entrada.success) return { mensagem: MENSAGEM_INVALIDO };
+  try {
+    const entrada = schemaLogin.safeParse({
+      email: form.get('email'),
+      pin: form.get('pin'),
+      lembrar: form.get('lembrar') === 'on',
+      para: form.get('para') ?? undefined,
+    });
+    if (!entrada.success) return { mensagem: MENSAGEM_INVALIDO };
 
-  const { email, pin, lembrar, para } = entrada.data;
-  const resultado = await emTransacao((tx) => autenticar(tx, email, pin));
-  if (!resultado.ok) {
-    if (resultado.motivo === 'bloqueado') {
-      const minutos = Math.max(1, Math.ceil((resultado.liberaEm.getTime() - Date.now()) / 60000));
-      return { mensagem: `Acesso bloqueado por excesso de tentativas. Tente novamente em ${minutos} min.` };
+    const { email, pin, lembrar, para } = entrada.data;
+    const resultado = await emTransacao((tx) => autenticar(tx, email, pin));
+    if (!resultado.ok) {
+      if (resultado.motivo === 'bloqueado') {
+        const minutos = Math.max(1, Math.ceil((resultado.liberaEm.getTime() - Date.now()) / 60000));
+        return { mensagem: `Acesso bloqueado por excesso de tentativas. Tente novamente em ${minutos} min.` };
+      }
+      return { mensagem: MENSAGEM_INVALIDO };
     }
-    return { mensagem: MENSAGEM_INVALIDO };
-  }
 
-  const sessao = await criarSessao(db(), resultado.userId);
-  await gravarCookieSessao(sessao);
-  if (lembrar && !resultado.deveTrocarPin) {
-    await gravarCookieDispositivo(await criarDispositivoConfiavel(db(), resultado.userId));
+    const sessao = await criarSessao(db(), resultado.userId);
+    await gravarCookieSessao(sessao);
+    if (lembrar && !resultado.deveTrocarPin) {
+      await gravarCookieDispositivo(await criarDispositivoConfiavel(db(), resultado.userId));
+    }
+    redirect(resultado.deveTrocarPin ? '/trocar-pin' : destinoSeguro(para));
+  } catch (erro) {
+    unstable_rethrow(erro);
+    return { mensagem: 'Não foi possível entrar agora. Tente novamente.' };
   }
-  redirect(resultado.deveTrocarPin ? '/trocar-pin' : destinoSeguro(para));
 }
 
 const acaoTrocarPin = criarAcao({

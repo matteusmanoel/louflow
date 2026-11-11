@@ -25,6 +25,7 @@ export type DelegadoEntry = {
 };
 
 export type UsuarioDetalhe = UsuarioListado & {
+  whatsapp: string | null;
   permissoes: ConcessaoUsuario[];
   delegacoesComo: { editorId: string; editorNome: string }[];
 };
@@ -68,12 +69,13 @@ export async function buscarUsuario(id: string): Promise<UsuarioDetalhe | null> 
         email: string;
         profile: string;
         editor_label: string | null;
+        whatsapp: string | null;
         is_active: boolean;
         must_reset_pin: boolean;
         created_at: Date;
       }[]
     >`
-      SELECT id, name, email, profile, editor_label, is_active, must_reset_pin, created_at
+      SELECT id, name, email, profile, editor_label, whatsapp, is_active, must_reset_pin, created_at
         FROM users WHERE id = ${id}`,
     sql<{ permission_key: string; granted: boolean }[]>`
       SELECT permission_key, granted FROM user_permissions WHERE user_id = ${id}`,
@@ -94,6 +96,7 @@ export async function buscarUsuario(id: string): Promise<UsuarioDetalhe | null> 
     email: row.email,
     perfil: row.profile as Perfil,
     editorLabel: row.editor_label,
+    whatsapp: row.whatsapp,
     ativo: row.is_active,
     deveTrocarPin: row.must_reset_pin,
     criadoEm: row.created_at,

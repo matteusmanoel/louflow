@@ -40,9 +40,11 @@ function menuRecolhido() {
 
 export function MenuLateral({
   grupos,
+  podeAvisos,
   children,
 }: {
   grupos: GrupoMenu[];
+  podeAvisos: boolean;
   children: ReactNode;
 }) {
   const caminho = usePathname();
@@ -96,7 +98,7 @@ export function MenuLateral({
               ))}
             </div>
 
-            <RodapeConta tom="escuro" />
+            <RodapeConta tom="escuro" podeAvisos={podeAvisos} />
           </nav>
           {children}
         </div>

@@ -32,6 +32,7 @@ const PERMISSOES_VAZIAS: Permissoes = {
   operarDrone: false,
   editorPadraoCortes: false,
   notaInformativaRanking: false,
+  conectarInstagram: false,
 };
 
 function sessao(id: string, perm: Partial<Permissoes> = {}): UsuarioSessao {

@@ -16,6 +16,7 @@ import {
 } from './schema';
 import type { Tx } from '@/lib/db';
 import { gravarArquivosDemanda } from '@/features/arquivos/gravar';
+import { textoEditorAtribuido } from '@/features/notificacoes/mensagens';
 
 const FORMATO_CORTES = 'Cortes';
 
@@ -100,7 +101,7 @@ export const defCriarDemanda: DefinicaoAcao<typeof schemaCriarDemanda, { id: str
         tipo: 'editor_atribuido',
         destinatarios: [editorId],
         assunto: `Nova demanda atribuída: ${entrada.title}`,
-        texto: `A demanda "${entrada.title}" foi atribuída a você.`,
+        texto: textoEditorAtribuido(entrada.title, editorId),
         demandaId: id,
       });
     }

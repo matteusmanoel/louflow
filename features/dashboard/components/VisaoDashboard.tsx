@@ -1,80 +1,74 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { BadgeStatus } from '@/features/demandas/components/BadgeStatus';
-import { BadgePrioridade } from '@/features/demandas/components/BadgePrioridade';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
 import type {
-  CicloAberto,
-  ContadoresAdministrador,
-  DemandaResumo,
+  AlertaPrazo,
   EntregaAguardando,
+  NivelPrazo,
   PendenciaAgenda,
   PostagemAgendada,
   VisaoDashboard as Visao,
 } from '@/features/dashboard/consultas';
-import { RelogioEdicao } from '@/features/status/components/RelogioEdicao';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardDescription, CardHeader } from '@/components/ui/card';
-import { EstadoVazio } from '@/components/ui/estado-vazio';
 import { formatarData, formatarDataHora } from '@/lib/datas';
-import { cn } from '@/lib/utils';
+import { FilaCompartilhada } from './FilaCompartilhada';
+import { GradeOperacao, type AcoesPainel } from './GradeOperacao';
+import { Indicadores } from './Indicadores';
 
 const DESCRICAO: Record<Visao['perfil'], string> = {
-  Administrador: 'Resumo das demandas ativas, dos atrasos e das aprovações.',
-  Editor: 'Suas demandas, as dos editores que você aprova e o tempo dos ciclos em aberto.',
-  Influencer: 'Suas demandas, pendências de agendamento e postagens agendadas.',
+  Administrador: 'Prazos, carga da equipe e saúde da operação.',
+  Editor: 'Sua fila, as demandas disponíveis e o tempo dos ciclos em aberto.',
+  Influencer: 'Seus conteúdos, pendências de agendamento e postagens.',
+};
+
+const FAIXA: Record<NivelPrazo, string> = {
+  atrasada: 'border-l-[var(--alerta-atrasada)] bg-[var(--alerta-atrasada-fundo)]',
+  hoje: 'border-l-[var(--alerta-hoje)] bg-[var(--alerta-hoje-fundo)]',
+  amanha: 'border-l-[var(--alerta-amanha)] bg-[var(--alerta-amanha-fundo)]',
+  'dois-dias': 'border-l-[var(--alerta-2dias)] bg-[var(--alerta-2dias-fundo)]',
+};
+
+const TEXTO_FAIXA: Record<NivelPrazo, string> = {
+  atrasada: 'text-[var(--alerta-atrasada)]',
+  hoje: 'text-[var(--alerta-hoje)]',
+  amanha: 'text-[var(--alerta-amanha)]',
+  'dois-dias': 'text-[var(--alerta-2dias)]',
 };
 
 export function descricaoDashboard(perfil: Visao['perfil']): string {
   return DESCRICAO[perfil];
 }
 
-export function VisaoDashboard({ visao }: { visao: Visao }) {
-  if (visao.perfil === 'Administrador') {
-    return (
-      <>
-        <Contadores contadores={visao.contadores} />
-        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
-          <Secao titulo="Demandas atrasadas">
-            <ListaDemandas itens={visao.atrasadas} vazio="Nenhuma demanda atrasada" />
-          </Secao>
-          <Secao titulo="Aprovações">
-            <ListaDemandas itens={visao.aprovacoes} vazio="Nenhuma demanda em aprovação" />
-          </Secao>
-        </div>
-      </>
-    );
-  }
-
-  if (visao.perfil === 'Influencer') {
-    return (
-      <>
-        <Secao titulo="Minhas demandas">
-          <ListaDemandas itens={visao.demandas} vazio="Nenhuma demanda sua" />
-        </Secao>
-        <Secao titulo="Pendências">
-          <ListaPendencias itens={visao.pendencias} />
-        </Secao>
-        <Secao titulo="Postagens agendadas">
-          <ListaAgendamentos itens={visao.agendamentos} />
-        </Secao>
-      </>
-    );
-  }
-
+export function VisaoDashboard({ visao, acoes }: { visao: Visao; acoes: AcoesPainel }) {
   return (
-    <>
-      <Secao titulo="Demandas">
-        <ListaDemandas itens={visao.demandas} vazio="Nenhuma demanda no seu escopo" />
-      </Secao>
-      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
-        <Secao titulo="Relógio de edição">
-          <ListaCiclos itens={visao.ciclos} />
-        </Secao>
+    <div className="flex min-w-0 flex-col gap-4">
+      <Indicadores itens={visao.indicadores} />
+      <AlertasPrazo itens={visao.alertasPrazo} perfil={visao.perfil} />
+      <GradeOperacao
+        prioridades={visao.prioridades}
+        carga={visao.perfil === 'Administrador' ? visao.carga : []}
+        concluidas={visao.perfil === 'Administrador' ? visao.concluidas14 : []}
+        saude={visao.perfil === 'Administrador' ? visao.saude : null}
+        acoes={acoes}
+      />
+      {visao.perfil === 'Editor' && (
+        <FilaCompartilhada itens={visao.fila} ocupadas={visao.ocupadas} podeAssumir={acoes.podeAssumir} />
+      )}
+      {visao.perfil === 'Editor' && visao.entregas.length > 0 && (
         <Secao titulo="Entregas aguardando aprovação">
           <ListaEntregas itens={visao.entregas} />
         </Secao>
-      </div>
-    </>
+      )}
+      {visao.perfil === 'Influencer' && (
+        <>
+          <Secao titulo="Pendências">
+            <ListaPendencias itens={visao.pendencias} />
+          </Secao>
+          <Secao titulo="Postagens agendadas">
+            <ListaAgendamentos itens={visao.agendamentos} />
+          </Secao>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -87,99 +81,65 @@ function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
   );
 }
 
-function Contadores({ contadores }: { contadores: ContadoresAdministrador }) {
-  const itens = [
-    { rotulo: 'Total', valor: contadores.total, alerta: false },
-    { rotulo: 'Atrasadas', valor: contadores.atrasadas, alerta: contadores.atrasadas > 0 },
-    { rotulo: 'Em aprovação', valor: contadores.emAprovacao, alerta: false },
-    { rotulo: 'Pendências', valor: contadores.pendencias, alerta: false },
-  ];
-  return (
-    <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-4" aria-label="Contadores">
-      {itens.map((item) => (
-        <li key={item.rotulo} className="min-w-0">
-          <Card>
-            <CardHeader className="gap-1 p-4">
-              <CardDescription>{item.rotulo}</CardDescription>
-              <p
-                className={cn(
-                  'fonte-numero text-2xl font-semibold tabular-nums',
-                  item.alerta ? 'text-[var(--alerta-atrasada)]' : 'text-[var(--texto-forte)]',
-                )}
-              >
-                {item.valor}
-              </p>
-            </CardHeader>
-          </Card>
-        </li>
-      ))}
-    </ul>
-  );
-}
+function AlertasPrazo({ itens, perfil }: { itens: AlertaPrazo[]; perfil: Visao['perfil'] }) {
+  if (itens.length === 0) return null;
+  const atrasadas = itens.filter((item) => item.diasParaPrazo < 0).length;
+  const proximas = itens.length - atrasadas;
+  const titulo =
+    perfil === 'Administrador'
+      ? 'Prazos da equipe que exigem atenção'
+      : perfil === 'Editor'
+        ? 'Seus prazos que exigem atenção'
+        : 'Prazos dos seus conteúdos que exigem atenção';
+  const resumo = [
+    atrasadas > 0 ? `${atrasadas} ${atrasadas === 1 ? 'demanda atrasada' : 'demandas atrasadas'}` : '',
+    proximas > 0
+      ? `${proximas} ${proximas === 1 ? 'demanda vence em até 2 dias' : 'demandas vencem em até 2 dias'}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
-function ListaDemandas({ itens, vazio }: { itens: DemandaResumo[]; vazio: string }) {
-  if (itens.length === 0) return <EstadoVazio titulo={vazio} className="py-4" />;
   return (
-    <ul className="m-0 flex list-none flex-col gap-2 p-0">
-      {itens.map((demanda) => (
-        <li key={demanda.id}>
-          <div
-            className={cn(
-              'flex min-w-0 flex-wrap items-center gap-2 rounded-[var(--raio-card)] border px-3 py-2',
-              demanda.atrasada
-                ? 'border-[var(--alerta-atrasada)] bg-[var(--linha-atrasada-fundo)]'
-                : 'border-[var(--borda-app)] bg-[var(--superficie)]',
-            )}
-          >
+    <section className="flex min-w-0 flex-col gap-3" aria-labelledby="alertas-prazo-titulo" aria-live="polite">
+      <div>
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--texto-suave)]">
+          Atenção aos prazos
+        </p>
+        <h2 id="alertas-prazo-titulo" className="text-base font-semibold text-[var(--texto-forte)]">
+          {titulo}
+        </h2>
+        <p className="text-sm text-[var(--texto-suave)]">{resumo}</p>
+      </div>
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        {itens.map((item) => (
+          <li key={item.id}>
             <Link
-              href={`/demandas/${demanda.id}`}
-              className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--texto-forte)]"
-              title={demanda.titulo}
+              href={`/demandas/${item.id}`}
+              title={`Abrir demanda ${item.titulo}`}
+              className={`flex min-w-0 flex-col gap-1 rounded-[var(--raio-card)] border border-[var(--borda-app)] border-l-[5px] px-3 py-2 transition-colors duration-150 sm:flex-row sm:items-center sm:justify-between ${FAIXA[item.nivel]}`}
             >
-              {demanda.titulo}
-            </Link>
-            <BadgeStatus status={demanda.status} />
-            <BadgePrioridade prioridade={demanda.prioridade} />
-            <span className="text-xs tabular-nums text-[var(--texto-suave)]">
-              {formatarData(demanda.prazo)}
-            </span>
-            {demanda.editorNome && (
-              <span className="max-w-full truncate text-xs text-[var(--texto-suave)]" title={demanda.editorNome}>
-                {demanda.editorNome}
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-[var(--texto-forte)]">{item.titulo}</span>
+                <span className="block truncate text-xs text-[var(--texto-suave)]">
+                  {item.editorNome ? `Editor: ${item.editorNome}` : 'Editor ainda não definido'}
+                  {' · '}
+                  {item.status}
+                </span>
               </span>
-            )}
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function ListaCiclos({ itens }: { itens: CicloAberto[] }) {
-  if (itens.length === 0) return <EstadoVazio titulo="Nenhum ciclo de edição aberto" className="py-4" />;
-  return (
-    <ul className="m-0 flex list-none flex-col gap-2 p-0">
-      {itens.map((ciclo) => (
-        <li
-          key={ciclo.demandaId}
-          className="flex min-w-0 flex-wrap items-center gap-2 rounded-[var(--raio-card)] border border-[var(--borda-app)] bg-[var(--superficie)] px-3 py-2"
-        >
-          <Link
-            href={`/demandas/${ciclo.demandaId}`}
-            className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--texto-forte)]"
-            title={ciclo.titulo}
-          >
-            {ciclo.titulo}
-          </Link>
-          {ciclo.pausado && <Badge variant="warning">Pausado</Badge>}
-          <RelogioEdicao
-            baseMs={ciclo.decorridoMs}
-            atualizadoEmMs={ciclo.atualizadoEmMs}
-            pausado={ciclo.pausado}
-          />
-        </li>
-      ))}
-    </ul>
+              <span className="text-right">
+                <span className={`block text-xs font-extrabold uppercase ${TEXTO_FAIXA[item.nivel]}`}>
+                  {item.textoPrazo}
+                </span>
+                <span className="block text-xs tabular-nums text-[var(--texto-suave)]">
+                  Prazo: {formatarData(item.prazo)}
+                </span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

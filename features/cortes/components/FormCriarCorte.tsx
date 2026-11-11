@@ -1,11 +1,10 @@
 'use client';
 
-import { useTransition, useState } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
 import { criarCorte } from '../actions';
 import { LINHAS_EDITORIAIS, PROGRAMAS_ORIGEM } from '../schema';
-import { CampoArquivo } from '@/features/arquivos/components/CampoArquivo';
-import type { ItemArquivo } from '@/features/arquivos/schema';
+import { CampoArquivo, type CampoArquivoHandle } from '@/features/arquivos/components/CampoArquivo';
 import { novoIdPasta } from '@/lib/armazenamento-chave';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +18,7 @@ export function FormCriarCorte({ aoSalvar }: { aoSalvar?: () => void }) {
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
   const [idCorte, setIdCorte] = useState(() => novoIdPasta('CL'));
-  const [arquivos, setArquivos] = useState<ItemArquivo[]>([]);
+  const campoArquivos = useRef<CampoArquivoHandle>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,21 +27,23 @@ export function FormCriarCorte({ aoSalvar }: { aoSalvar?: () => void }) {
     setErro(null);
 
     startTransition(async () => {
-      const resultado = await criarCorte({
-        id: idCorte,
-        titulo: fd.get('titulo') as string,
-        influencerId: (fd.get('influencerId') as string) || null,
-        dataPostagem: fd.get('dataPostagem') as string,
-        linhaEditorial: fd.get('linhaEditorial') as (typeof LINHAS_EDITORIAIS)[number],
-        linkVideo: (fd.get('linkVideo') as string) || null,
-        arquivos,
-        programaOrigem: fd.get('programaOrigem') as (typeof PROGRAMAS_ORIGEM)[number],
-      });
+      const resultado = await campoArquivos.current!.enviar((arquivos) =>
+        criarCorte({
+          id: idCorte,
+          titulo: fd.get('titulo') as string,
+          influencerId: (fd.get('influencerId') as string) || null,
+          dataPostagem: fd.get('dataPostagem') as string,
+          linhaEditorial: fd.get('linhaEditorial') as (typeof LINHAS_EDITORIAIS)[number],
+          linkVideo: (fd.get('linkVideo') as string) || null,
+          arquivos,
+          programaOrigem: fd.get('programaOrigem') as (typeof PROGRAMAS_ORIGEM)[number],
+        }),
+      );
 
       mostrarFeedback(resultado);
       if (resultado.ok) {
         form.reset();
-        setArquivos([]);
+        campoArquivos.current?.limpar();
         setIdCorte(novoIdPasta('CL'));
         aoSalvar?.();
       } else {
@@ -116,10 +117,9 @@ export function FormCriarCorte({ aoSalvar }: { aoSalvar?: () => void }) {
         id="linkVideo"
         name="linkVideo"
         rotulo="Link do Vídeo (opcional)"
+        ref={campoArquivos}
         grupo="cortes"
         donoId={idCorte}
-        arquivos={arquivos}
-        aoMudarArquivos={setArquivos}
         placeholder="https://drive.google.com/…"
       />
 

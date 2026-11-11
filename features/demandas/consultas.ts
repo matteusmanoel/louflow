@@ -310,6 +310,17 @@ export async function carregarDemandaPagina(id: string): Promise<Demanda | null>
   return buscarDemanda(db(), id);
 }
 
+/** True só quando a Demanda existe e está na Lixeira. Id desconhecido é false. */
+export async function demandaEstaNaLixeira(sql: Db, id: string): Promise<boolean> {
+  const [linha] = await sql<{ ok: boolean }[]>`
+    SELECT true AS ok FROM demands WHERE id = ${id} AND deleted_at IS NOT NULL LIMIT 1`;
+  return linha?.ok === true;
+}
+
+export async function carregarDemandaExcluidaPagina(id: string): Promise<boolean> {
+  return demandaEstaNaLixeira(db(), id);
+}
+
 /** Carrega a Fila de Fichas para a página — chama db() internamente. */
 export async function carregarFilaDeFichasPagina(): Promise<Demanda[]> {
   return listarFilaDeFichas(db());

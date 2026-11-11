@@ -1,21 +1,21 @@
 import { exigirModulo } from '@/lib/auth';
-import { listarPreferencias } from '@/features/notificacoes/consultas';
-import { FormularioPreferencias } from '@/features/notificacoes/components/FormularioPreferencias';
+import { lerCadencia } from '@/features/notificacoes/consultas';
+import { FormularioAvisos } from '@/features/notificacoes/components/FormularioAvisos';
 import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
 import { ContainerPagina } from '@/components/ui/container-pagina';
 
-export default async function PaginaPreferencias() {
-  const usuario = await exigirModulo('preferencias');
-  const preferencias = await listarPreferencias(usuario.id);
+export default async function PaginaAvisos() {
+  await exigirModulo('preferencias');
+  const cadencia = await lerCadencia();
 
   return (
     <ContainerPagina largura="formulario">
       <CabecalhoPagina
         grupo="Conta"
-        titulo="Preferências"
-        descricao="Escolha quais eventos você deseja receber por e-mail."
+        titulo="Avisos"
+        descricao="O WhatsApp do setor recebe atribuição, ajuste, aprovação, prazo e pendência."
       />
-      <FormularioPreferencias preferencias={preferencias} />
+      <FormularioAvisos cadencia={cadencia} />
     </ContainerPagina>
   );
 }

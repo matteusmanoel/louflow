@@ -1,5 +1,5 @@
-/** Grupo do objeto no bucket. Demanda e Corte não compartilham pasta. */
-export const GRUPOS_ARQUIVO = ['demandas', 'cortes'] as const;
+/** Grupo do objeto no bucket. Demanda, Corte e pasta livre não compartilham prefixo. */
+export const GRUPOS_ARQUIVO = ['demandas', 'cortes', 'drive'] as const;
 export type GrupoArquivo = (typeof GRUPOS_ARQUIVO)[number];
 
 export const TIPOS_ARQUIVO = [
@@ -11,6 +11,8 @@ export const TIPOS_ARQUIVO = [
   'image/png',
   'image/webp',
   'image/gif',
+  'image/heic',
+  'image/heif',
   'audio/mpeg',
   'audio/wav',
   'audio/mp4',
@@ -31,7 +33,7 @@ const EXPIRACAO_LEITURA_SEGUNDOS = 60 * 60;
 
 export { EXPIRACAO_ENVIO_SEGUNDOS, EXPIRACAO_LEITURA_SEGUNDOS };
 
-const CHAVE_NOVA = /^(demandas|cortes)\/[A-Za-z0-9_-]{2,40}\/[0-9a-f-]{36}-[a-z0-9._-]{1,80}$/;
+const CHAVE_NOVA = /^(demandas|cortes|drive)\/[A-Za-z0-9_-]{2,40}\/[0-9a-f-]{36}-[a-z0-9._-]{1,80}$/;
 const CHAVE_LEGADA = /^(entregas|demandas|cortes)\/\d{4}\/\d{2}\/[0-9a-f-]{36}-[a-z0-9._-]{1,80}$/;
 
 export function nomeSeguro(nome: string): string {

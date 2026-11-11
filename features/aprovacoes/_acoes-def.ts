@@ -1,8 +1,12 @@
 import 'server-only';
 import type { DefinicaoAcao } from '@/lib/action';
+import { novoId } from '@/lib/crypto';
+import type { Tx } from '@/lib/db';
 import { ErroDominio } from '@/lib/errors';
+import type { UsuarioSessao } from '@/lib/session';
 import { transicionarStatus } from '@/features/status/index';
 import { gravarArquivosDemanda } from '@/features/arquivos/gravar';
+import { textoAjuste, textoAprovacao } from '@/features/notificacoes/mensagens';
 import {
   schemaRegistrarEntrega,
   schemaAprovarEntrega,
@@ -63,18 +67,50 @@ export const defRegistrarEntrega: DefinicaoAcao<
   },
 };
 
-export const defAprovarEntrega: DefinicaoAcao<typeof schemaAprovarEntrega, null> = {
+const podeEntrarAvaliacao = (usuario: UsuarioSessao) =>
+  usuario.perfil === 'Administrador' ||
+  usuario.perfil === 'Influencer' ||
+  usuario.ehAprovadorDelegado ||
+  usuario.permissoes.verTodasDemandas;
+
+async function podeAvaliar(
+  tx: Tx,
+  usuario: UsuarioSessao,
+  demanda: { influencer_id: string | null; editor_id: string | null },
+) {
+  if (usuario.perfil === 'Administrador' || usuario.permissoes.verTodasDemandas) return true;
+  if (demanda.influencer_id === usuario.id) return true;
+  if (!demanda.editor_id) return false;
+  const [delegacao] = await tx<{ ok: number }[]>`
+    SELECT 1 AS ok FROM approval_delegations
+    WHERE approver_id = ${usuario.id} AND editor_id = ${demanda.editor_id}`;
+  return Boolean(delegacao);
+}
+
+async function entregaEmAvaliacao(tx: Tx, usuario: UsuarioSessao, entregaId: string) {
+  const [entrega] = await tx<{ demand_id: string; status: string; version: number }[]>`
+    SELECT demand_id, status, version FROM deliveries WHERE id = ${entregaId} FOR UPDATE`;
+  if (!entrega) throw new ErroDominio('Entrega não encontrada.');
+  if (entrega.status !== 'Aguardando aprovação') {
+    throw new ErroDominio(`Entrega não está aguardando aprovação (status: ${entrega.status}).`);
+  }
+  const [demanda] = await tx<{ title: string; influencer_id: string | null; editor_id: string | null }[]>`
+    SELECT title, influencer_id, editor_id FROM demands WHERE id = ${entrega.demand_id} FOR UPDATE`;
+  if (!demanda || !(await podeAvaliar(tx, usuario, demanda))) {
+    throw new ErroDominio('Você não avalia esta entrega.');
+  }
+  return { entrega, demanda };
+}
+
+export const defAprovarEntrega: DefinicaoAcao<
+  typeof schemaAprovarEntrega,
+  { demandaId: string; titulo: string }
+> = {
   nome: 'aprovarEntrega',
   schema: schemaAprovarEntrega,
-  permissao: 'verTodasDemandas',
-  executar: async ({ tx, usuario, entrada }) => {
-    const [entrega] = await tx<{ demand_id: string; status: string; version: number }[]>`
-      SELECT demand_id, status, version FROM deliveries WHERE id = ${entrada.entregaId} FOR UPDATE`;
-
-    if (!entrega) throw new ErroDominio('Entrega não encontrada.');
-    if (entrega.status !== 'Aguardando aprovação') {
-      throw new ErroDominio(`Entrega não está aguardando aprovação (status: ${entrega.status}).`);
-    }
+  permissao: podeEntrarAvaliacao,
+  executar: async ({ tx, usuario, entrada, notificar }) => {
+    const { entrega, demanda } = await entregaEmAvaliacao(tx, usuario, entrada.entregaId);
 
     await tx`
       UPDATE deliveries
@@ -91,21 +127,39 @@ export const defAprovarEntrega: DefinicaoAcao<typeof schemaAprovarEntrega, null>
       motivo: entrada.observacoes,
     });
 
-    return { dados: null, mensagem: 'Entrega aprovada. Demanda concluída.' };
+    if (demanda.influencer_id) {
+      await tx`
+        INSERT INTO mandatory_schedules (id, demand_id, influencer_id, title, version, status)
+        VALUES (
+          ${novoId('AO')}, ${entrega.demand_id}, ${demanda.influencer_id},
+          ${demanda.title}, ${entrega.version}, 'Pendente'
+        )
+        ON CONFLICT (demand_id) WHERE status = 'Pendente' DO NOTHING`;
+    }
+
+    notificar({
+      tipo: 'concluida_aprovada',
+      destinatarios: demanda.influencer_id ? [demanda.influencer_id] : [],
+      assunto: `Demanda aprovada: ${demanda.title}`,
+      texto: textoAprovacao(demanda.title, demanda.influencer_id),
+      demandaId: entrega.demand_id,
+    });
+
+    return {
+      dados: { demandaId: entrega.demand_id, titulo: demanda.title },
+      mensagem: 'Entrega aprovada. Demanda concluída.',
+    };
   },
 };
 
 export const defReprovarEntrega: DefinicaoAcao<typeof schemaReprovarEntrega, null> = {
   nome: 'reprovarEntrega',
   schema: schemaReprovarEntrega,
-  permissao: 'verTodasDemandas',
-  executar: async ({ tx, usuario, entrada }) => {
-    const [entrega] = await tx<{ demand_id: string; status: string; version: number }[]>`
-      SELECT demand_id, status, version FROM deliveries WHERE id = ${entrada.entregaId} FOR UPDATE`;
-
-    if (!entrega) throw new ErroDominio('Entrega não encontrada.');
-    if (entrega.status !== 'Aguardando aprovação') {
-      throw new ErroDominio(`Entrega não está aguardando aprovação (status: ${entrega.status}).`);
+  permissao: podeEntrarAvaliacao,
+  executar: async ({ tx, usuario, entrada, notificar }) => {
+    const { entrega, demanda } = await entregaEmAvaliacao(tx, usuario, entrada.entregaId);
+    if (usuario.perfil === 'Administrador') {
+      throw new ErroDominio('Quem administra aprova a entrega. O pedido de ajuste fica com o influencer.');
     }
 
     await tx`
@@ -118,11 +172,19 @@ export const defReprovarEntrega: DefinicaoAcao<typeof schemaReprovarEntrega, nul
 
     await transicionarStatus(tx, {
       demandaId: entrega.demand_id,
-      novoStatus: 'Em execução',
+      novoStatus: 'Ajustes solicitados',
       usuarioId: usuario.id,
       motivo: entrada.motivoRejeicao,
     });
 
-    return { dados: null, mensagem: 'Entrega reprovada. Demanda devolvida para edição.' };
+    notificar({
+      tipo: 'ajuste_solicitado',
+      destinatarios: demanda.editor_id ? [demanda.editor_id] : [],
+      assunto: `Ajuste solicitado: ${demanda.title}`,
+      texto: textoAjuste(demanda.title, demanda.editor_id, entrada.motivoRejeicao),
+      demandaId: entrega.demand_id,
+    });
+
+    return { dados: null, mensagem: 'Ajuste solicitado.' };
   },
 };

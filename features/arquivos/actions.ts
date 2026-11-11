@@ -1,6 +1,7 @@
 'use server';
 
 import { criarAcao } from '@/lib/action';
-import { defPrepararUpload } from './acoes-def';
+import { defDescartarUploads, defPrepararUpload } from './acoes-def';
 
 export const prepararUpload = criarAcao(defPrepararUpload);
+export const descartarUploads = criarAcao(defDescartarUploads);

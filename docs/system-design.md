@@ -15,7 +15,7 @@
 | Banco | Neon Postgres, plano gratuito | Decidido |
 | Deploy | ADO Pipeline com `vercel deploy --prebuilt`: PR → preview, merge em `main` → produção | Decidido |
 | Repo | `loumar-tech/louflow-marketing/_git/louflow` | Decidido |
-| E-mail | Resend, plano gratuito | Decidido (P5) |
+| WhatsApp | uazapi, instância do setor. Sem credencial o aviso só é registrado | Decidido |
 | Agendador | cron-job.org chamando rotas protegidas por segredo | Decidido (P5) |
 | Tempo real | Polling HTTP com cache de borda, sem WebSocket | Decidido (P5) |
 
@@ -37,7 +37,7 @@ flowchart LR
   end
 
   Neon[("Neon Postgres")]
-  Resend["Resend"]
+  Uazapi["uazapi"]
   Drive["Drive e WeTransfer: links"]
 
   Browser --> Pages
@@ -51,7 +51,7 @@ flowchart LR
   TvApi --> Neon
   Sync --> Neon
   Domain --> Neon
-  Domain --> Resend
+  Domain --> Uazapi
   Browser -.-> Drive
 ```
 
@@ -143,7 +143,7 @@ Leituras viram Server Components ou queries. Mutações viram Server Actions. Fu
 | `cortes` | `salvarCorte`, `concluirCorte` | Actions |
 | `wiki` | `salvarRegraWiki`, `alterarPublicacaoRegraWiki`, `obterFotosCatalogoEquipamentos` | Actions; o catálogo vira um JSON estático |
 | `sorteios` | `cadastrarSorteio`, `consultarSorteios`, `registrarRetiradaSorteio` | Actions |
-| `preferencias` | `obterPreferenciasNotificacao`, `salvarPreferenciasNotificacao` | Server Component + Action |
+| `preferencias` | `lerCadencia`, `salvarCadencia`, `enviarEnsaio` | Painel do admin: cadência e ensaio |
 | `relatorios` | `obterRelatorioDiario` | Server Component |
 | `analista` | `obterStatusAnalistaLouFlow`, `perguntarAoAnalistaLouFlow` | Server Component + Action |
 | `usuarios` | `listarUsuariosPainel`, `salvarUsuarioPainel`, `redefinirPinUsuario`, `desligarUsuarioPainel`, `limparMembroAusentePainel` | Actions de administração |
@@ -208,32 +208,35 @@ Use o driver serverless da Neon com transação interativa (WebSocket ou pool). 
 | PIN | Digest com segredo nas Script Properties | Hash lento de senha, com sal, numa biblioteca padrão de mercado. Pepper numa variável de ambiente da Vercel. **Reset forçado de todos no lançamento** |
 | Escopo Prêmios | `validarSessao_(token, 'sorteios')` | Middleware: Perfil Prêmios só alcança `/sorteios` |
 
-Segredos ficam **somente** nas variáveis de ambiente da Vercel e da Pipeline: banco, pepper do PIN, `CRON_SECRET` e chave do Resend. Nunca vão para o repositório, para logs ou para documentos.
+Segredos ficam **somente** nas variáveis de ambiente da Vercel e da Pipeline: banco, pepper do PIN, `CRON_SECRET`, token da uazapi e `META_TOKEN_KEY` (cifra o token de cada Business Manager). Nunca vão para o repositório, para logs ou para documentos.
 
 ## 8. Rotinas agendadas
 
-A produção tem **três** gatilhos de tempo, e não um:
+A produção tem **quatro** gatilhos de tempo, e não um:
 
 | Rotina | Hoje | Destino |
 |---|---|---|
 | Encerrar Captações e Reservas vencidas | A cada 5 min e também em cada leitura | `POST /api/cron/encerramentos` a cada 5 min. A leitura também aplica a regra, como hoje. `UPDATE … WHERE fim <= now() AND situacao = ...` é idempotente |
 | Pendências do Influencer: prazo padrão de 24 h, lembretes e aviso à administração | A cada 15 min | `POST /api/cron/pendencias` a cada 15 min |
 | Alerta de prazo por Editor | Diário às 08:00 | `POST /api/cron/alertas-prazo` diário às 08:00 America/Sao_Paulo |
+| Publicar agendamentos de Instagram | — | `POST /api/cron/instagram` a cada 1 min. Idempotente: reusa o container e não republica quem já tem `ig_media_id` |
 
 Contrato de toda rota de cron:
 
 - Exige `Authorization: Bearer $CRON_SECRET`. Sem esse cabeçalho, responde 401.
-- É idempotente: rodar duas vezes não duplica e-mails, porque as colunas `*_sent_at` funcionam como trava.
+- É idempotente: rodar duas vezes não duplica avisos. Prazo e pendência usam `notification_dispatches` como trava.
 - Termina dentro do limite de execução da função.
 - Registra falhas em `error_log`.
 
 O Vercel Cron do plano Hobby roda só uma vez por dia. Por isso um agendador externo atende os três jobs com um só mecanismo.
 
-## 9. E-mail
+## 9. WhatsApp
 
-- O e-mail só sai **depois do commit**. Uma falha de envio não desfaz a operação e é registrada em `error_log`.
-- Antes de enviar, o servidor consulta as preferências do destinatário (`notification_preferences`).
-- Limite do plano gratuito do Resend: 100 e-mails por dia e 3 000 por mês. Volume estimado: 16 usuários com alertas diários e mudanças de Status, o que fica abaixo do limite. Há um risco: lotes administrativos grandes. Mitigação: o lote envia um resumo, e não um e-mail por Demanda.
+- O aviso só sai **depois do commit**. Uma falha de envio não desfaz a operação e é registrada em `error_log`.
+- O destino é um só: a conversa de teste ou, com `UAZAPI_GRUPO_LIBERADO=true`, o grupo do setor. Não há opt-out individual.
+- Menção (`@` e o campo `mentions`) só vai para grupo, e só de quem tem telefone no cadastro. Nos outros casos a mensagem usa o nome.
+- Ajuste, aprovação e editor atribuído saem na hora. Prazo e pendência do influencer saem no horário e no intervalo definidos pelo admin.
+- Status (fora o ajuste) e comentário não geram aviso.
 
 ## 10. Painel de TV
 

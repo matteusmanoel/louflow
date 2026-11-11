@@ -44,6 +44,7 @@ const PERMISSOES_VAZIAS: Permissoes = {
   operarDrone: false,
   editorPadraoCortes: false,
   notaInformativaRanking: false,
+  conectarInstagram: false,
 };
 
 function sessao(
@@ -497,5 +498,31 @@ describe('buscarUsuario', () => {
     const detalhe = await buscarUsuario(alvoId);
     expect(detalhe).not.toBeNull();
     expect(detalhe?.permissoes).toContainEqual({ chave: 'criarDemandas', concedida: true });
+  });
+});
+
+describe('whatsapp no cadastro', () => {
+  it('grava o telefone com DDI e recusa um número incompleto', async () => {
+    const { id: adminId } = await criarUsuarioHelper({ perfil: 'Administrador' });
+    const admin = sessao(adminId, { permissoes: { gerenciarUsuarios: true } });
+
+    const criado = await executarAcao(
+      defCriarUsuario,
+      { nome: 'Editor Teste', email: 'editor-zap@exemplo.test', perfil: 'Editor', whatsapp: '11999990000' },
+      deps(admin),
+    );
+    expect(criado.ok).toBe(true);
+    if (!criado.ok) return;
+
+    const [linha] = await sqlTeste()<{ whatsapp: string }[]>`
+      SELECT whatsapp FROM users WHERE id = ${criado.dados.usuarioId}`;
+    expect(linha?.whatsapp).toBe('5511999990000');
+
+    const invalido = await executarAcao(
+      defCriarUsuario,
+      { nome: 'Outro', email: 'outro-zap@exemplo.test', perfil: 'Editor', whatsapp: '123' },
+      deps(admin),
+    );
+    expect(invalido.ok).toBe(false);
   });
 });

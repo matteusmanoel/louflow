@@ -3,6 +3,7 @@ import { executarAcao } from '@/lib/action';
 import type { Permissoes } from '@/lib/permissions';
 import type { UsuarioSessao } from '@/lib/session';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
+import { defAgendarPublicacao } from '@/features/instagram/acoes-def';
 import { defRegistrarEntrega, defAprovarEntrega, defReprovarEntrega } from './_acoes-def';
 import { listarAprovacoes, listarEntregasDemanda } from './consultas';
 import { montarChave, urlDoObjeto } from '@/lib/armazenamento-chave';
@@ -37,6 +38,7 @@ const PERMISSOES_VAZIAS: Permissoes = {
   operarDrone: false,
   editorPadraoCortes: false,
   notaInformativaRanking: false,
+  conectarInstagram: false,
 };
 
 function sessao(id: string, perm: Partial<Permissoes> = {}): UsuarioSessao {
@@ -264,13 +266,18 @@ describe('aprovarEntrega', () => {
 // ---------------------------------------------------------------------------
 
 describe('reprovarEntrega', () => {
-  it('reprova entrega e devolve Demanda para Em execução', async () => {
+  it('influencer pede ajuste e a demanda fica em Ajustes solicitados', async () => {
     const { id: editorId } = await criarUsuario({ perfil: 'Editor' });
-    const { id: aprovadorId } = await criarUsuario({ perfil: 'Administrador' });
+    const { id: influencerId } = await criarUsuario({ perfil: 'Influencer' });
     const demandaId = await criarDemanda('Em execução', editorId);
+    await sqlTeste()`UPDATE demands SET influencer_id = ${influencerId} WHERE id = ${demandaId}`;
 
     const editor = sessao(editorId, { editarDemandas: true });
-    const aprovador = sessao(aprovadorId, { verTodasDemandas: true });
+    const aprovador: UsuarioSessao = {
+      ...sessao(influencerId),
+      perfil: 'Influencer',
+      nome: 'Influencer',
+    };
 
     const regRes = await executarAcao(
       defRegistrarEntrega,
@@ -290,7 +297,7 @@ describe('reprovarEntrega', () => {
 
     const sql = sqlTeste();
     const [dem] = await sql<{ status: string }[]>`SELECT status FROM demands WHERE id = ${demandaId}`;
-    expect(dem?.status).toBe('Em execução');
+    expect(dem?.status).toBe('Ajustes solicitados');
 
     const [del] = await sql<{ status: string; reason: string | null }[]>`
       SELECT status, reason FROM deliveries WHERE id = ${entregaId}`;
@@ -370,5 +377,89 @@ describe('listarAprovacoes', () => {
     expect(hist).toHaveLength(1);
     expect(hist[0]!.versao).toBe(1);
     expect(hist[0]!.status).toBe('Aguardando aprovação');
+  });
+});
+
+describe('aprovação seguida de agendamento', () => {
+  it('cria a agenda obrigatória e o influencer agenda o arquivo da entrega', async () => {
+    const { id: editorId } = await criarUsuario({ perfil: 'Editor' });
+    const { id: influencerId } = await criarUsuario({ perfil: 'Influencer' });
+    const { id: adminId } = await criarUsuario({ perfil: 'Administrador' });
+    const demandaId = await criarDemanda('Em execução', editorId);
+    const sql = sqlTeste();
+    await sql`UPDATE demands SET influencer_id = ${influencerId} WHERE id = ${demandaId}`;
+    await sql`
+      INSERT INTO meta_portfolios (id, label, status, created_by)
+      VALUES ('MPtesteag01', 'BM de teste', 'sem_token', ${adminId})`;
+    await sql`
+      INSERT INTO instagram_accounts (id, portfolio_id, ig_user_id, page_id, username, status)
+      VALUES ('IAtesteag01', 'MPtesteag01', '17840000000000001', '100000000000001', 'conta.teste', 'ok')`;
+
+    const editor = sessao(editorId, { editarDemandas: true });
+    const influencer: UsuarioSessao = { ...sessao(influencerId), perfil: 'Influencer', nome: 'Influencer' };
+    const registrada = await executarAcao(
+      defRegistrarEntrega,
+      { demandaId, arquivoUrl: 'https://exemplo.test/entrega.jpg' },
+      deps(editor),
+    );
+    if (!registrada.ok) throw new Error(registrada.mensagem);
+
+    await sql`
+      INSERT INTO demand_files (id, demand_id, delivery_id, url, file_name, content_type, byte_size, created_by)
+      VALUES (
+        'ARteste0001', ${demandaId}, ${registrada.dados.entregaId},
+        'https://exemplo.test/entrega.jpg', 'entrega.jpg', 'image/jpeg', 1200, ${editorId}
+      )`;
+
+    const aprovada = await executarAcao(defAprovarEntrega, { entregaId: registrada.dados.entregaId }, deps(influencer));
+    expect(aprovada.ok).toBe(true);
+    const [obrigatoria] = await sql<{ status: string }[]>`
+      SELECT status FROM mandatory_schedules WHERE demand_id = ${demandaId}`;
+    expect(obrigatoria?.status).toBe('Pendente');
+
+    const agendada = await executarAcao(
+      defAgendarPublicacao,
+      {
+        contaId: 'IAtesteag01',
+        titulo: 'Post da entrega',
+        legenda: 'Legenda da entrega',
+        arquivoId: 'ARteste0001',
+        demandaId,
+        formato: 'imagem',
+        marca: 'Loumar',
+        quando: '2026-12-01T15:00',
+      },
+      deps(influencer),
+    );
+    expect(agendada.ok).toBe(true);
+
+    const [agenda] = await sql<{ demand_id: string; status: string }[]>`
+      SELECT demand_id, status FROM post_schedules WHERE demand_id = ${demandaId}`;
+    expect(agenda?.status).toBe('Agendada');
+    const [resolvida] = await sql<{ status: string; post_schedule_id: string | null }[]>`
+      SELECT status, post_schedule_id FROM mandatory_schedules WHERE demand_id = ${demandaId}`;
+    expect(resolvida?.status).toBe('Agendada');
+    expect(resolvida?.post_schedule_id).toBeTruthy();
+  });
+
+  it('administrador aprova e não solicita ajuste', async () => {
+    const { id: editorId } = await criarUsuario({ perfil: 'Editor' });
+    const { id: adminId } = await criarUsuario({ perfil: 'Administrador' });
+    const demandaId = await criarDemanda('Em execução', editorId);
+    const editor = sessao(editorId, { editarDemandas: true });
+    const admin: UsuarioSessao = { ...sessao(adminId, { verTodasDemandas: true }), perfil: 'Administrador' };
+    const registrada = await executarAcao(
+      defRegistrarEntrega,
+      { demandaId, arquivoUrl: 'https://exemplo.test/ajuste.jpg' },
+      deps(editor),
+    );
+    if (!registrada.ok) throw new Error(registrada.mensagem);
+    const resposta = await executarAcao(
+      defReprovarEntrega,
+      { entregaId: registrada.dados.entregaId, motivoRejeicao: 'Trocar a foto.' },
+      deps(admin),
+    );
+    expect(resposta.ok).toBe(false);
+    expect(resposta.mensagem).toMatch(/influencer/i);
   });
 });

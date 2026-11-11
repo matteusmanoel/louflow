@@ -1,4 +1,5 @@
 import type { HandlerJob } from '@/lib/cron';
+import { avisarPendenciasInfluencer } from '@/features/notificacoes/jobs';
 
-/** S1-16 (#11571): prazo padrão de 24 h, lembretes e aviso à administração. Idempotente via *_sent_at. */
-export const processarPendencias: HandlerJob = async () => ({ afetados: 0 });
+/** S1-16: o cron de 15 min acorda a checagem. A cadência e o texto ficam nos avisos. */
+export const processarPendencias: HandlerJob = (ctx) => avisarPendenciasInfluencer(ctx);

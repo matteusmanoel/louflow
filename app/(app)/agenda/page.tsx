@@ -1,5 +1,5 @@
 import { exigirModulo } from '@/lib/auth';
-import { listarAgendaDb } from '@/features/agenda/consultas';
+import { listarAgendaDb, listarPublicacoesAgenda } from '@/features/agenda/consultas';
 import { CalendarioAgenda } from '@/features/agenda/components/CalendarioAgenda';
 import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
 import { ContainerPagina } from '@/components/ui/container-pagina';
@@ -15,7 +15,10 @@ export default async function PaginaAgenda({ searchParams }: { searchParams: Sea
   const ano = Number(params.ano) || agora.getFullYear();
   const diaSelecionado = params.dia ? Number(params.dia) : undefined;
 
-  const demandas = await listarAgendaDb({ mes, ano }, usuario);
+  const [demandas, publicacoes] = await Promise.all([
+    listarAgendaDb({ mes, ano }, usuario),
+    listarPublicacoesAgenda({ mes, ano }, usuario),
+  ]);
 
   return (
     <ContainerPagina largura="total">
@@ -24,6 +27,7 @@ export default async function PaginaAgenda({ searchParams }: { searchParams: Sea
         mes={mes}
         ano={ano}
         demandas={demandas}
+        publicacoes={publicacoes}
         diaSelecionado={diaSelecionado}
         podeGerenciar={usuario.permissoes.gerenciarAgenda}
       />

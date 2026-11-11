@@ -9,6 +9,7 @@ import { PRIORIDADE_BARRA } from './icones';
 import { sair } from '@/features/acesso/actions';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
+import { SinoAvisos } from './SinoAvisos';
 
 const ROTULO_PERFIL: Record<UsuarioSessao['perfil'], string> = {
   Administrador: 'Admin',
@@ -53,26 +54,31 @@ export function AppShell({ usuario, children }: { usuario: UsuarioSessao; childr
   const mostrarMenu = permitidos.length > 1;
   const perfil = ROTULO_PERFIL[usuario.perfil];
 
+  const podeAvisos = usuario.permissoes.gerenciarUsuarios;
+
   return (
-    <MenuLateral grupos={grupos}>
+    <MenuLateral grupos={grupos} podeAvisos={podeAvisos}>
       <header className={mostrarMenu ? 'topo-shell topo-shell--so-desktop' : 'topo-shell'}>
-        <MenuMobile grupos={grupos} nome={usuario.nome} perfil={perfil} visivel={mostrarMenu} />
+        <MenuMobile grupos={grupos} nome={usuario.nome} perfil={perfil} visivel={mostrarMenu} podeAvisos={podeAvisos} />
 
-        <div className="usuario-info">
-          <span className="usuario-nome">{usuario.nome}</span>
-          <span className="usuario-perfil">{perfil}</span>
-        </div>
-
-        {!mostrarMenu && (
-          <div className="acoes-topo acoes-topo--mobile">
-            <AlternarTema />
-            <form action={sair}>
-              <Button variant="ghost" size="icon" type="submit" aria-label="Sair do sistema">
-                <LogOut className="h-4 w-4" aria-hidden />
-              </Button>
-            </form>
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          <SinoAvisos />
+          <div className="usuario-info">
+            <span className="usuario-nome">{usuario.nome}</span>
+            <span className="usuario-perfil">{perfil}</span>
           </div>
-        )}
+
+          {!mostrarMenu && (
+            <div className="acoes-topo acoes-topo--mobile">
+              <AlternarTema />
+              <form action={sair}>
+                <Button variant="ghost" size="icon" type="submit" aria-label="Sair do sistema">
+                  <LogOut className="h-4 w-4" aria-hidden />
+                </Button>
+              </form>
+            </div>
+          )}
+        </div>
       </header>
 
       <main className="conteudo-shell">{children}</main>

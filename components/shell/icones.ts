@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   FileText,
+  FolderOpen,
   ListChecks,
   ClipboardList,
   CheckCircle2,
@@ -19,6 +20,7 @@ import {
   Users,
   Trash2,
   Shield,
+  Share2,
   Settings,
   type LucideIcon,
 } from 'lucide-react';
@@ -29,6 +31,7 @@ export type ItemMenu = { slug: string; rotulo: string };
 export const ICONES: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
   demandas: FileText,
+  drive: FolderOpen,
   fichas: ListChecks,
   'ficha-tecnica': ClipboardList,
   aprovacoes: CheckCircle2,
@@ -46,6 +49,7 @@ export const ICONES: Record<string, LucideIcon> = {
   sorteios: Gift,
   usuarios: Users,
   lixeira: Trash2,
+  instagram: Share2,
   auditoria: Shield,
   preferencias: Settings,
 };
@@ -64,6 +68,7 @@ export const ROTULO_CURTO: Record<string, string> = {
   cortes: 'Cortes',
   usuarios: 'Usuários',
   lixeira: 'Lixeira',
+  instagram: 'Instagram',
   auditoria: 'Auditoria',
 };
 

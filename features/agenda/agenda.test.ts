@@ -4,7 +4,7 @@ import { executarAcao, MENSAGEM_SEM_PERMISSAO } from '@/lib/action';
 import type { UsuarioSessao } from '@/lib/session';
 import { resolverPermissoes } from '@/lib/permissions';
 import { defAgendarPostagem, defCancelarAgendamento } from './_acoes-def';
-import { listarAgendaDb } from './consultas';
+import { listarAgendaDb, listarPublicacoesAgenda } from './consultas';
 
 usarBancoLimpo();
 
@@ -313,5 +313,55 @@ describe('listarAgendaDb', () => {
 
     const resultado = await listarAgendaDb({ mes: 11, ano: 2026 }, sessao, sqlTeste());
     expect(resultado.every((d) => d.id !== id)).toBe(true);
+  });
+});
+
+describe('listarPublicacoesAgenda', () => {
+  it('mostra a publicação no dia de Brasília e esconde de quem não participa', async () => {
+    const { id: dono } = await criarUsuario({ perfil: 'Influencer' });
+    const { id: outro } = await criarUsuario({ perfil: 'Editor' });
+    const { id: adminId } = await criarUsuario({ perfil: 'Administrador' });
+    await sqlTeste()`
+      INSERT INTO post_schedules (
+        id, influencer_id, title, platform, scheduled_at, status, brand, scheduled_by
+      ) VALUES (
+        'PStesteag01', ${dono}, 'Reel da agenda', 'Instagram',
+        '2026-11-10 13:22:00-03', 'Agendada', 'Loumar', ${dono}
+      )`;
+    await sqlTeste()`
+      INSERT INTO post_schedules (
+        id, title, platform, scheduled_at, status, brand, scheduled_by
+      ) VALUES (
+        'PStestecan1', 'Cancelada', 'Instagram',
+        '2026-11-10 18:00:00-03', 'Cancelada', 'Loumar', ${dono}
+      )`;
+
+    const admin: UsuarioSessao = {
+      id: adminId, nome: 'Admin', perfil: 'Administrador',
+      editorLabel: null, deveTrocarPin: false,
+      permissoes: resolverPermissoes('Administrador', []),
+      ehAprovadorDelegado: false,
+    };
+    const influencer: UsuarioSessao = {
+      id: dono, nome: 'Influencer', perfil: 'Influencer',
+      editorLabel: null, deveTrocarPin: false,
+      permissoes: resolverPermissoes('Influencer', []),
+      ehAprovadorDelegado: false,
+    };
+    const estranho: UsuarioSessao = {
+      id: outro, nome: 'Editor', perfil: 'Editor',
+      editorLabel: null, deveTrocarPin: false,
+      permissoes: resolverPermissoes('Editor', []),
+      ehAprovadorDelegado: false,
+    };
+
+    const doAdmin = await listarPublicacoesAgenda({ mes: 11, ano: 2026 }, admin, sqlTeste());
+    expect(doAdmin).toEqual([
+      expect.objectContaining({ id: 'PStesteag01', dia: 10, horario: '13:22', status: 'Agendada', titulo: 'Reel da agenda' }),
+    ]);
+    const doDono = await listarPublicacoesAgenda({ mes: 11, ano: 2026 }, influencer, sqlTeste());
+    expect(doDono.map((item) => item.id)).toEqual(['PStesteag01']);
+    const doOutro = await listarPublicacoesAgenda({ mes: 11, ano: 2026 }, estranho, sqlTeste());
+    expect(doOutro).toHaveLength(0);
   });
 });

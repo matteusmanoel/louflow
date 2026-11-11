@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { exigirModulo } from '@/lib/auth';
 import {
+  carregarDemandaExcluidaPagina,
   carregarDemandaPagina,
   carregarEditoresPagina,
   carregarFormatosPagina,
@@ -31,7 +32,10 @@ export async function FormularioDemandaPagina({
     carregarInfluencersPagina(),
   ]);
 
-  if (id && !demanda) notFound();
+  if (id && !demanda) {
+    if (await carregarDemandaExcluidaPagina(id)) redirect('/demandas');
+    notFound();
+  }
 
   return (
     <FormDemanda

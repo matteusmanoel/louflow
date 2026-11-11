@@ -58,6 +58,7 @@ CREATE TABLE users (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name            text NOT NULL,
   email           citext NOT NULL UNIQUE,
+  whatsapp        text,                 -- dígitos com DDI 55; menção no grupo. NULL = só o nome
   editor_label    text,                 -- coluna "Editor": nome exibido nas Demandas
   profile         user_profile NOT NULL,
   pin_hash        text,                 -- NULL = sem PIN (reset pendente ou inativo sem conta)
@@ -82,7 +83,8 @@ CREATE TABLE user_permissions (
     'acessarCortes','verAbaCortes','verRelatorios','usarAnalista','gerenciarUsuarios',
     'verLixeira','verSorteios',
     -- novas: substituem regras que hoje dependem de nome próprio (D9)
-    'operarDrone','editorPadraoCortes','notaInformativaRanking'
+    'operarDrone','editorPadraoCortes','notaInformativaRanking',
+    'conectarInstagram'
   )),
   granted         boolean NOT NULL,
   updated_at      timestamptz NOT NULL DEFAULT now(),
@@ -135,7 +137,26 @@ CREATE TABLE notification_preferences (
   deadline_near       boolean NOT NULL DEFAULT true,  -- Prazo proximo
   updated_at          timestamptz NOT NULL DEFAULT now()
 );
--- Default true = confirmar no ensaio que equivale ao comportamento atual sem linha.
+-- O canal do setor não consulta mais esta tabela. Ela permanece para não reescrever a migration inicial.
+
+-- Cadência do feed (uma linha). Horários em America/Sao_Paulo.
+CREATE TABLE notification_settings (
+  id                    boolean PRIMARY KEY DEFAULT true CHECK (id),
+  deadline_hour         smallint NOT NULL DEFAULT 8,
+  deadline_lead_days    smallint NOT NULL DEFAULT 2,
+  pending_hour          smallint NOT NULL DEFAULT 8,
+  pending_grace_hours   smallint NOT NULL DEFAULT 24,
+  updated_at            timestamptz NOT NULL DEFAULT now(),
+  updated_by            uuid REFERENCES users(id)
+);
+
+-- Trava de reenvio dos resumos de prazo e de pendência.
+CREATE TABLE notification_dispatches (
+  kind         text NOT NULL,
+  subject_key  text NOT NULL,
+  sent_at      timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (kind, subject_key)
+);
 ```
 
 ## 3. Demandas
@@ -245,10 +266,37 @@ CREATE TABLE demand_files (
   content_type  text NOT NULL,
   byte_size     bigint NOT NULL CHECK (byte_size > 0 AND byte_size <= 1073741824),
   created_by    uuid NOT NULL REFERENCES users(id),
-  created_at    timestamptz NOT NULL DEFAULT now()
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  deleted_at    timestamptz                 -- não NULL = lixeira do Drive; expurgo apaga a linha
 );
 CREATE INDEX demand_files_demand_idx ON demand_files (demand_id, created_at);
 CREATE INDEX demand_files_delivery_idx ON demand_files (delivery_id) WHERE delivery_id IS NOT NULL;
+CREATE INDEX demand_files_vivos_idx ON demand_files (demand_id, created_at) WHERE deleted_at IS NULL;
+
+-- Árvore do Drive. parent_id pode ser um nó, uma Demanda ou um Corte (sem FK).
+CREATE TABLE drive_nodes (
+  id              text PRIMARY KEY,
+  parent_id       text,
+  kind            text NOT NULL CHECK (kind IN ('pasta', 'arquivo')),
+  name            text NOT NULL CHECK (length(btrim(name)) BETWEEN 1 AND 180),
+  demand_file_id  text UNIQUE REFERENCES demand_files(id) ON DELETE CASCADE,
+  url             text,
+  content_type    text,
+  byte_size       bigint CHECK (byte_size IS NULL OR (byte_size > 0 AND byte_size <= 1073741824)),
+  created_by      uuid NOT NULL REFERENCES users(id),
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  deleted_at      timestamptz,
+  trash_root_id   text,
+  CHECK (
+    (kind = 'pasta' AND url IS NULL AND content_type IS NULL AND byte_size IS NULL AND demand_file_id IS NULL)
+    OR (kind = 'arquivo' AND url IS NOT NULL AND content_type IS NOT NULL AND byte_size IS NOT NULL)
+  ),
+  CHECK (deleted_at IS NULL OR trash_root_id IS NOT NULL)
+);
+CREATE UNIQUE INDEX drive_nodes_nome_vivo_uq
+  ON drive_nodes (COALESCE(parent_id, ''), lower(name))
+  WHERE deleted_at IS NULL;
 
 -- Aba: Ciclos_Edicao
 CREATE TABLE editing_cycles (
@@ -346,10 +394,22 @@ CREATE TABLE post_schedules (
                    'Ailabiu','Ticket Loko','City Tour')),
   content_type   text,                          -- Tipo de conteúdo
   scheduled_by   uuid NOT NULL REFERENCES users(id), -- Agendado por / Email do responsavel
+  instagram_account_id text,                     -- publicação real no Instagram; ver instagram_accounts
+  caption        text,
+  media_url      text,
+  media_kind     text,                           -- imagem | reel | story
+  container_id   text,
+  ig_media_id    text,
+  publish_error  text,
+  publish_attempts integer NOT NULL DEFAULT 0,
+  publish_claimed_at timestamptz,
+  published_at   timestamptz,
   created_at     timestamptz NOT NULL DEFAULT now(),
   updated_at     timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX post_schedules_when_idx ON post_schedules (scheduled_at) WHERE status = 'Agendada';
+-- meta_portfolios: um Business Manager, token cifrado (ciphertext + iv), status sem_token|pendente|autenticada|erro.
+-- instagram_accounts: contas sincronizadas daquele BM. status ok|erro|ausente|pendente. Ok libera o agendamento.
 
 -- Aba: Agendamentos_Obrigatorios. Criado quando uma Entrega é aprovada.
 CREATE TABLE mandatory_schedules (

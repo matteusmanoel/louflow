@@ -1,12 +1,12 @@
 import 'server-only';
-import type { Sql } from './db';
+import type { Db } from './db';
 import { enviarNotificacao } from '@/features/notificacoes/enviador';
 import { registrarErro } from './error-log';
 
 /**
  * Interface de notificação. As fatias só enfileiram notificações dentro da Server Action;
- * o envio acontece depois do commit. O adaptador real (Resend) é implementado por S1-08
- * em features/notificacoes/enviador.ts, sem mudar esta assinatura.
+ * o envio acontece depois do commit. O adaptador (uazapi) vive em
+ * features/notificacoes/enviador.ts, sem mudar esta assinatura.
  */
 
 export type TipoNotificacao =
@@ -21,14 +21,14 @@ export type TipoNotificacao =
 
 export type Notificacao = {
   tipo: TipoNotificacao;
-  /** Usuários destinatários; o adaptador resolve e-mail e preferências. */
+  /** Usuários a mencionar no grupo. O destino do envio é o canal configurado. */
   destinatarios: string[];
   assunto: string;
   texto: string;
   demandaId?: string;
 };
 
-export type Enviador = (sql: Sql, n: Notificacao) => Promise<void>;
+export type Enviador = (sql: Db, n: Notificacao) => Promise<void>;
 
 let enviador: Enviador = enviarNotificacao;
 
@@ -38,7 +38,7 @@ export function registrarEnviador(novo: Enviador | null) {
 }
 
 /** Envia após o commit. Falhas são registradas e nunca propagadas. */
-export async function despacharNotificacoes(sql: Sql, fila: readonly Notificacao[]): Promise<void> {
+export async function despacharNotificacoes(sql: Db, fila: readonly Notificacao[]): Promise<void> {
   for (const n of fila) {
     try {
       await enviador(sql, n);

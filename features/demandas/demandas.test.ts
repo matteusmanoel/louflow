@@ -4,7 +4,7 @@ import { executarAcao, type DefinicaoAcao } from '@/lib/action';
 import type { UsuarioSessao } from '@/lib/session';
 import type { ZodType } from 'zod';
 import { resolverPermissoes } from '@/lib/permissions';
-import { listarDemandas, buscarDemanda, listarFilaDeFichas } from './consultas';
+import { listarDemandas, buscarDemanda, demandaEstaNaLixeira, listarFilaDeFichas } from './consultas';
 import {
   defAlterarPrioridade,
   defAssumirFicha,
@@ -179,6 +179,16 @@ describe('excluirDemanda (soft delete)', () => {
       SELECT action FROM history WHERE demand_id = ${demandaId}
     `;
     expect(h?.action).toMatch(/lixeira/i);
+  });
+
+  it('reconhece demanda na lixeira sem confundir com id inexistente', async () => {
+    const excluida = await criarDemandaDir({ title: 'Na lixeira', deleted_at: new Date() });
+    const ativa = await criarDemandaDir({ title: 'Ainda ativa' });
+    const sql = sqlTeste();
+
+    expect(await demandaEstaNaLixeira(sql, excluida)).toBe(true);
+    expect(await demandaEstaNaLixeira(sql, ativa)).toBe(false);
+    expect(await demandaEstaNaLixeira(sql, 'LFINEXISTENTE')).toBe(false);
   });
 
   it('não aparece na listagem após soft delete', async () => {

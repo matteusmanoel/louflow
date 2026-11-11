@@ -5,8 +5,7 @@ import { useRef, useState, useTransition } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
 import type { Demanda } from '../consultas';
 import { criarDemanda, editarDemanda, excluirDemanda } from '../actions';
-import { CampoArquivo } from '@/features/arquivos/components/CampoArquivo';
-import type { ItemArquivo } from '@/features/arquivos/schema';
+import { CampoArquivo, type CampoArquivoHandle } from '@/features/arquivos/components/CampoArquivo';
 import { novoIdPasta } from '@/lib/armazenamento-chave';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { mostrarFeedback } from '@/lib/toast';
 import { RodapeAcoes } from '@/components/ui/rodape-acoes';
-import { PainelEntidade, useFecharPainel } from '@/components/ui/painel-entidade';
+import { liberarFechoPainel, PainelEntidade, suspenderFechoPainel, useFecharPainel } from '@/components/ui/painel-entidade';
 
 type Opcao = { id: string; nome: string; label?: string };
 
@@ -66,7 +65,7 @@ export function FormDemanda({
   const [sujo, setSujo] = useState(false);
   const [formato, setFormato] = useState(demanda?.format ?? '');
   const [idPasta] = useState(() => demanda?.id ?? novoIdPasta('LF'));
-  const [arquivos, setArquivos] = useState<ItemArquivo[]>([]);
+  const campoArquivos = useRef<CampoArquivoHandle>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   function marcarSujo() {
@@ -93,18 +92,18 @@ export function FormDemanda({
       post_date: (dados.get('post_date') as string) || null,
       info: (dados.get('info') as string) || null,
       link: (dados.get('link') as string) || null,
-      arquivos,
       editorial_line: sentinela(dados.get('editorial_line'), 'nenhum') as 'Viral' | 'Comunidade' | 'Educacional' | null,
       source_program: (dados.get('source_program') as string) || null,
       clips_count: dados.get('clips_count') ? Number(dados.get('clips_count')) : null,
     };
 
     startTransition(async () => {
-      const resultado = editando
-        ? await editarDemanda(entrada)
-        : await criarDemanda(entrada);
+      const resultado = await campoArquivos.current!.enviar((arquivos) =>
+        editando ? editarDemanda({ ...entrada, arquivos }) : criarDemanda({ ...entrada, arquivos }),
+      );
 
       if (resultado.ok) {
+        campoArquivos.current?.limpar();
         mostrarFeedback(resultado);
         setSujo(false);
         // Edição modal: o detalhe já está no histórico. Push dessa URL
@@ -124,17 +123,21 @@ export function FormDemanda({
     });
   }
 
-  async function handleExcluir() {
+  function handleExcluir() {
     if (!demanda) return;
+    // A modal de edição fica sobre o detalhe. Confirmar a exclusão fecha o
+    // Dialog por fora e o fecho chama router.back(), que reabre a demanda
+    // já excluída (404). O refresh da rota atual tem o mesmo efeito.
+    if (variante === 'modal') suspenderFechoPainel();
     startTransition(async () => {
       const resultado = await excluirDemanda({ id: demanda.id });
       mostrarFeedback(resultado);
       if (resultado.ok) {
         router.replace('/demandas');
-        router.refresh();
-      } else {
-        setErro(resultado.mensagem);
+        return;
       }
+      if (variante === 'modal') liberarFechoPainel();
+      setErro(resultado.mensagem);
     });
   }
 
@@ -287,12 +290,9 @@ export function FormDemanda({
         grupo="demandas"
         donoId={idPasta}
         valorInicial={demanda?.link ?? ''}
+        ref={campoArquivos}
         aoMudar={marcarSujo}
-        arquivos={arquivos}
-        aoMudarArquivos={(lista) => {
-          setArquivos(lista);
-          marcarSujo();
-        }}
+        aoMudarPendentes={marcarSujo}
         placeholder="https://drive.google.com/…"
       />
 

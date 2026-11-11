@@ -7,11 +7,18 @@ import { Toaster } from 'sonner';
 
 /**
  * Layout autenticado.
- * Zona protegida — alteração justificada: adição de <Toaster> do Sonner
- * como requisito do plano de refatoração visual (Etapa 4).
- * Necessário para que Server Action feedback funcione via lib/toast.ts.
+ * Zona protegida — alterações justificadas:
+ * - <Toaster> do Sonner, para o feedback de Server Action em lib/toast.ts.
+ * - Slot @painel: a modal de demanda só intercepta rotas do layout que a contém.
+ *   No layout de /demandas o clique vindo da agenda ou do dashboard trocava a página.
  */
-export default async function LayoutAutenticado({ children }: { children: React.ReactNode }) {
+export default async function LayoutAutenticado({
+  children,
+  painel,
+}: {
+  children: React.ReactNode;
+  painel: React.ReactNode;
+}) {
   const usuario = await exigirSessao();
   if (usuario.deveTrocarPin) redirect('/trocar-pin');
 
@@ -22,6 +29,7 @@ export default async function LayoutAutenticado({ children }: { children: React.
           <AvisoDeRota />
         </Suspense>
         {children}
+        {painel}
       </AppShell>
       <Toaster
         position="top-right"

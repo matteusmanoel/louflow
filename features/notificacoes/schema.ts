@@ -1,13 +1,11 @@
 import { z } from 'zod';
 
-/** Schema para salvar preferências de notificação do usuário autenticado. */
-export const schemaPreferencias = z.object({
-  editor_atribuido: z.boolean(),
-  status_alterado: z.boolean(),
-  novo_comentario: z.boolean(),
-  ajuste_solicitado: z.boolean(),
-  concluida_aprovada: z.boolean(),
-  prazo_proximo: z.boolean(),
+/** Cadência definida pelo admin. Prazo em dias de antecedência; pendência em horas de folga. */
+export const schemaCadencia = z.object({
+  horaPrazo: z.number().int().min(0).max(23),
+  antecedenciaDias: z.number().int().min(1).max(14),
+  horaPendencia: z.number().int().min(0).max(23),
+  folgaHoras: z.number().int().min(1).max(168),
 });
 
-export type EntradaPreferencias = z.infer<typeof schemaPreferencias>;
+export type EntradaCadencia = z.infer<typeof schemaCadencia>;
