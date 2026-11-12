@@ -74,9 +74,9 @@ O revisor pode aprovar sozinho se todos os itens da §3 passarem.
 
 ### 2.4 Repositório
 
-18. Commit com `AB#<id>` do Work Item. **Sem `Co-authored-by`** de ferramentas ou agentes.
+18. PR no GitHub `matteusmanoel/louflow` contra `develop`. `AB#<id>` do Azure Boards é opcional quando houver Work Item. **Sem `Co-authored-by`** de ferramentas ou agentes.
 19. O PR não mistura zonas sem necessidade. UI e Server Action nova vão em PRs separados quando possível.
-20. Lint, typecheck e testes verdes na Pipeline. Preview gerado.
+20. Lint, typecheck e testes verdes (`pnpm lint`, `pnpm typecheck`, `pnpm test:db`, `pnpm build`). Preview gerado quando a pipeline de CD existir; agentes de nuvem não fazem deploy.
 
 ## 3. Checklist do revisor
 

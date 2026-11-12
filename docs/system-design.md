@@ -13,8 +13,8 @@
 | Aplicação | Next.js App Router, Server Components e Server Actions, TypeScript | Decidido |
 | Hosting | Vercel, plano gratuito | Decidido |
 | Banco | Neon Postgres, plano gratuito | Decidido |
-| Deploy | ADO Pipeline com `vercel deploy --prebuilt`: PR → preview, merge em `main` → produção | Decidido |
-| Repo | `loumar-tech/louflow-marketing/_git/louflow` | Decidido |
+| Deploy | Arquivo `azure-pipelines.yml`: CI (lint, typecheck, `test:db`, build) e CD (`vercel deploy --prebuilt`). PRs no GitHub; merge em `main` → produção. Agentes de nuvem não disparam CD nem falam com Neon/Vercel | Atualizado |
+| Repo | GitHub `matteusmanoel/louflow` (oficial). Ainda não há projeto nem repositório do LouFlow no Azure DevOps | Atualizado |
 | WhatsApp | uazapi, instância do setor. Sem credencial o aviso só é registrado | Decidido |
 | Agendador | cron-job.org chamando rotas protegidas por segredo | Decidido (P5) |
 | Tempo real | Polling HTTP com cache de borda, sem WebSocket | Decidido (P5) |
@@ -262,7 +262,7 @@ Etapas da Pipeline, em ordem:
 
 Uma falha em qualquer etapa interrompe o deploy. Migrations rodam **antes** do deploy e são aditivas, para que a versão anterior continue funcionando durante a troca.
 
-Estratégia de branches no ADO: o padrão Loumar é `develop`, `staging`, `main`. Este documento assume só `main` + PRs, conforme D5b. **Pendente de confirmação com o TL** se `develop` deve existir.
+Estratégia de branches no GitHub: `develop` (padrão de PRs) e `main` (produção). O padrão Loumar em outros repositórios inclui `staging`; o LouFlow não usa `staging` neste repositório.
 
 ## 12. Migração dos dados (execução única)
 

@@ -79,10 +79,10 @@ Testes cobrem o comportamento público da fatia (Server Actions e consultas cont
 
 1. Parta de `develop` atualizado: `git switch develop && git pull && git switch -c feature/<taskId>-<slug>`.
 2. Trabalhe em worktree próprio quando houver agentes em paralelo (`git worktree add ../louflow-<taskId> -b feature/<taskId>-<slug> develop`).
-3. Commits: `feat(<fatia>): descrição` + corpo curto + `AB#<taskId> AB#<userStoryId>`. **Proibido** qualquer trailer `Co-authored-by`.
-4. PR para `develop` no repositório `louflow` (projeto ADO `louflow-marketing`), título `feat(<fatia>): <descrição>`, descrição com `AB#<id>`, resumo, checklist dos critérios de aceite com a evidência de cada um, e arquivos fora da pasta própria (se houver) justificados.
+3. Commits: `feat(<fatia>): descrição` + corpo curto. Se a tarefa tiver item no Azure Boards, acrescente `AB#<taskId> AB#<userStoryId>` (opcional). **Proibido** qualquer trailer `Co-authored-by`.
+4. PR para `develop` no GitHub `matteusmanoel/louflow` (repositório oficial). Título `feat(<fatia>): <descrição>`, descrição com o template em `.github/pull_request_template.md`, resumo, checklist dos critérios de aceite com a evidência de cada um, e arquivos fora da pasta própria (se houver) justificados. Ainda não há projeto nem repositório do LouFlow no Azure DevOps; não abra PR lá.
 5. Antes do PR: `git fetch && git rebase origin/develop` e o gate de novo.
-6. `main` só recebe merge com aprovação humana.
+6. `main` só recebe merge com aprovação humana. Não faça merge.
 
 ## 7. Segurança e dados
 
@@ -96,7 +96,51 @@ Testes cobrem o comportamento público da fatia (Server Actions e consultas cont
 
 O sistema antigo (Apps Script) fica **fora do repositório**, apenas na máquina local, somente leitura:
 `/Users/matteusmanoel/Projects/Loumar/louflow/demandas-edits/` (código `.js`/`.html`).
-Use para conferir regras de negócio. Nunca copie dados, nunca faça commit desse diretório nem de planilhas (`*.xlsx`), e nunca reproduza nomes de pessoas no código. Se o legado conflitar com o PRD, o PRD vence.
+Use para conferir regras de negócio. Nunca copie dados, nunca faça commit desse diretório nem de planilhas (`*.xlsx`), e nunca reproduza nomes de pessoas no código. Se o legado conflitar com o PRD, o PRD vence. Na VM de Cloud Agent esse diretório **não existe**; use [`docs/prd-louflow.md`](docs/prd-louflow.md) e, se faltar regra, pergunte no PR.
+
+## Cursor Cloud specific instructions
+
+- VM Ubuntu com o repositório na branch pedida. Imagem: Node 24, pnpm `11.28.6` (corepack), Docker. Veja `.cursor/environment.json` e [`docs/ENV-SETUP.md`](docs/ENV-SETUP.md).
+- Boot: `.cursor/start.sh` sobe o Postgres local (`docker-compose.yml`, porta 54329, tmpfs), roda `pnpm db:migrate` e `pnpm db:seed`, define o PIN sintético `482916` nos `@exemplo.test` sem PIN e deixa `next dev` na porta 3000 (tmux `dev`). O `.env.local` de nuvem só tem valores locais e sintéticos.
+- Login de UI: `admin@exemplo.test` / `482916` (sintético; o mesmo de `e2e/contas.ts`).
+- **Nenhum segredo real existe na VM** e nenhum deve ser pedido. Sem `UAZAPI_*` e sem `S3_BUCKET` o app degrada de propósito (aviso só registrado; Drive só por link).
+- Gate antes de abrir o PR: `pnpm lint && pnpm typecheck && pnpm test:db && pnpm build` (§5). E2E só quando a fatia for S1-17 ou a tarefa pedir (`pnpm exec playwright install --with-deps chromium` antes). Com o `next dev` do boot já em `:3000`, use `E2E_BASE_URL=http://127.0.0.1:3000 pnpm exec playwright test` — o Next 16 recusa um segundo `next dev` no mesmo `.next`.
+- Branch `feature/<taskId>-<slug>` a partir de `develop`; commits `feat(<fatia>): …`; **proibido** `Co-authored-by`. O PR do agente é no GitHub, contra `develop`, e é o PR definitivo.
+- Não faça merge, não toque em `main`, não rode nada que fale com Neon/Vercel/WhatsApp/S3, não edite `azure-pipelines.yml`.
+
+## Papéis de revisão (bots revisores)
+
+Cada revisor lê só a sua área, cita arquivo e linha e segue `docs/pr-review-guide.md` (§4: aprovar / comentar / `Waiting for author`). Zona protegida (§1.1) nunca é aprovada por bot: marcar a TI.
+
+### UI e acessibilidade
+- [ ] Só tokens de `app/globals.css`/`components/ui`; sem hex novo; tema claro **e** escuro (`[data-tema='escuro']`).
+- [ ] `<Button>` para ação, `<Badge>` para status; `AlertDialog` em ação destrutiva (nunca `window.confirm`); toasts via `lib/toast.ts`.
+- [ ] Exatamente um `h1`; a página não abre outro `<main>`, sem padding/`max-w-*`/`min-w-[…]` ad hoc; sem estouro horizontal em 650 e 390 px.
+- [ ] Ícones Lucide com `aria-hidden` ou `aria-label` no pai; foco visível; sem emoji em controles.
+- [ ] Textos usam o vocabulário do `CONTEXT.md` ("Demanda", "Entrega", "Perfil"…).
+- [ ] Painel de entidade segue `docs/agents/ui-standards.md` §13.3.
+
+### Backend e integrações
+- [ ] Server Action só via `criarAcao` (`lib/action.ts`), ordem Sessão → zod → Permissão → transação → domínio → commit → notificações.
+- [ ] Mutação de Demanda: `SELECT … FOR UPDATE` + `registrarHistorico(tx, …)` na mesma transação; `UPDATE demands SET status` só em `features/status/`.
+- [ ] Páginas/componentes não importam `@/lib/db`; leituras em `features/<fatia>/consultas.ts`.
+- [ ] Notificação só depois do commit; falha de envio não desfaz a operação; jobs de cron idempotentes com assinatura `HandlerJob`.
+- [ ] Restrições `EXCLUDE` traduzidas via `restricoes`, sem varredura prévia.
+- [ ] Testes cobrem comportamento público e casos negativos de Permissão (`tests/helpers/db.ts`).
+
+### Arquitetura e infraestrutura
+- [ ] O PR toca só as pastas da própria fatia (§1); arquivos fora dela estão justificados.
+- [ ] Contratos de `lib/` consumidos, não recriados; `PropsSecaoDemanda` e exports reservados intactos.
+- [ ] Migration nova: arquivo `AAAAMMDDHHMM_<taskId>_<slug>.sql`, aditiva, sem editar as existentes; nova Permissão = `CHECK` + `lib/permissions.ts` no mesmo PR.
+- [ ] `package.json`/lockfile/`azure-pipelines.yml`/`next.config.ts`: justificativa de uma linha e marca da TI.
+- [ ] Pipeline do PR verde (lint, typecheck, `test:db`, build).
+
+### Segurança
+- [ ] Sessão validada antes de qualquer lógica; Permissão checada depois; Sessão nunca vem de argumento.
+- [ ] `/api/tv` com DTO de campos explícitos (sem `SELECT *`/spread); `/api/cron/*` exige `Authorization: Bearer $CRON_SECRET` e devolve 401 sem ele.
+- [ ] Nenhum segredo, connection string, `.env` real, token ou nome/e-mail/link de Drive real no diff, seed, fixture, log ou erro (`registrarErro` não é contornado).
+- [ ] Perfil Prêmios só alcança Sorteios; rota nova declara escopo em `lib/modules.ts` (protegido).
+- [ ] Sem nomes próprios em regra de código (usar Permissão); sem `Co-authored-by`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
