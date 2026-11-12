@@ -1,6 +1,7 @@
 import { linkAcessivel } from '@/lib/armazenamento';
 import { exigirModulo } from '@/lib/auth';
 import { listarAprovacoes } from '@/features/aprovacoes/consultas';
+import { linkParaCartao } from '@/features/aprovacoes/link-entrega';
 import { ListaAprovacoes } from '@/features/aprovacoes/components/ListaAprovacoes';
 import { listarArquivosEntregas } from '@/features/arquivos/consultas';
 import { listarContasAgendaveis } from '@/features/instagram/consultas';
@@ -18,15 +19,14 @@ export default async function PaginaAprovacoes() {
   const arquivos = await listarArquivosEntregas(aprovacoesBrutas.map((item) => item.entregaId));
   const itens = await Promise.all(
     aprovacoesBrutas.map(async (item) => {
+      const arquivosBrutos = arquivos.filter((arquivo) => arquivo.entregaId === item.entregaId);
       const daEntrega = await Promise.all(
-        arquivos
-          .filter((arquivo) => arquivo.entregaId === item.entregaId)
-          .map(async (arquivo) => ({
-            id: arquivo.id,
-            nome: arquivo.nome,
-            mime: arquivo.mime,
-            url: (await linkAcessivel(arquivo.url)) ?? arquivo.url,
-          })),
+        arquivosBrutos.map(async (arquivo) => ({
+          id: arquivo.id,
+          nome: arquivo.nome,
+          mime: arquivo.mime,
+          url: (await linkAcessivel(arquivo.url)) ?? arquivo.url,
+        })),
       );
       const podeAgendar =
         daEntrega.length > 0 &&
@@ -42,6 +42,11 @@ export default async function PaginaAprovacoes() {
         podeAjustar: usuario.perfil !== 'Administrador',
         podeAgendar,
         arquivos: daEntrega,
+        link: linkParaCartao(
+          item.link,
+          arquivosBrutos.map((arquivo) => arquivo.url),
+          (await linkAcessivel(item.link)) ?? item.link,
+        ),
       };
     }),
   );

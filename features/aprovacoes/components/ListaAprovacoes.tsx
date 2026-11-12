@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { File, Loader2 } from 'lucide-react';
+import { ExternalLink, File, Loader2 } from 'lucide-react';
 import { aprovarEntrega, reprovarEntrega } from '../actions';
 import { classeMidia, ModalAgendarEntrega, type AssetEntrega } from './ModalAgendarEntrega';
+import type { LinkEntrega } from '../link-entrega';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -29,6 +30,7 @@ export type AprovacaoVisivel = {
   podeAjustar: boolean;
   podeAgendar: boolean;
   arquivos: AssetEntrega[];
+  link: LinkEntrega | null;
 };
 
 export function ListaAprovacoes({
@@ -108,6 +110,17 @@ export function ListaAprovacoes({
                       );
                     })}
                   </ul>
+                )}
+                {item.link && (
+                  <a
+                    href={item.link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-fit max-w-full items-center gap-2 rounded-[var(--raio-card)] border border-[var(--borda-app)] bg-[var(--superficie)] px-3 py-2 text-sm text-[var(--texto-forte)] no-underline hover:underline"
+                  >
+                    <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="truncate">Abrir entrega · {item.link.rotulo}</span>
+                  </a>
                 )}
                 {item.nota ? <p className="m-0 text-sm text-[var(--texto-suave)]">{item.nota}</p> : null}
                 <div className="flex flex-col gap-2 sm:flex-row">
