@@ -1,5 +1,6 @@
 import type { PropsSecaoDemanda } from '@/features/demandas/secoes';
-import { obterFichaTecnicaDb } from '@/features/fichas/consultas';
+import { obterFichaEnviadaDb, obterFichaTecnicaDb } from '@/features/fichas/consultas';
+import { formatarData } from '@/lib/datas';
 import { FormFichaTecnica } from './FormFichaTecnica';
 import { EditarFicha } from './EditarFicha';
 import { EstadoVazio } from '@/components/ui/estado-vazio';
@@ -11,6 +12,8 @@ import { FileText } from 'lucide-react';
  */
 export async function FichaSecao({ demandaId, usuario }: PropsSecaoDemanda) {
   const ficha = await obterFichaTecnicaDb(demandaId);
+  // Ficha enviada pelo Influencer: a leitura é conferida no servidor (dono, Editor da Demanda, Fila, Administrador).
+  const enviada = await obterFichaEnviadaDb(demandaId, usuario);
   const podeEditar = usuario.permissoes.editarDemandas;
 
   return (
@@ -19,7 +22,7 @@ export async function FichaSecao({ demandaId, usuario }: PropsSecaoDemanda) {
     >
       <h2 className="text-base font-semibold text-[var(--texto-forte)] m-0">Ficha Técnica</h2>
 
-      {!ficha && !podeEditar && (
+      {!ficha && !enviada && !podeEditar && (
         <EstadoVazio
           icone={FileText}
           titulo="Nenhuma ficha técnica"
@@ -45,6 +48,50 @@ export async function FichaSecao({ demandaId, usuario }: PropsSecaoDemanda) {
             <div className="col-span-full">
               <Detalhe rotulo="Observações Técnicas" valor={ficha.observacoesTecnicas} multiline />
             </div>
+          )}
+        </div>
+      )}
+
+      {enviada && (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-x-6 gap-y-3" data-ficha-enviada>
+          <Detalhe rotulo="Enviada por" valor={`${enviada.enviadaPor} em ${formatarData(enviada.enviadaEm.toISOString().slice(0, 10))}`} />
+          {enviada.previsaoPublicacao && (
+            <Detalhe rotulo="Previsão de publicação" valor={formatarData(enviada.previsaoPublicacao)} />
+          )}
+          {enviada.plataforma && <Detalhe rotulo="Plataforma" valor={enviada.plataforma} />}
+          {enviada.formatoConteudo && <Detalhe rotulo="Formato do conteúdo" valor={enviada.formatoConteudo} />}
+          {enviada.editorSugerido && <Detalhe rotulo="Editor sugerido" valor={enviada.editorSugerido} />}
+          {enviada.linkArquivos && (
+            <div className="col-span-full">
+              <div className="mb-0.5 text-xs font-medium text-[var(--texto-suave)]">Link de arquivos</div>
+              <a
+                href={enviada.linkArquivos}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all text-sm text-[var(--loumar-700)]"
+              >
+                {enviada.linkArquivos}
+              </a>
+            </div>
+          )}
+          {(
+            [
+              ['Observação ao editor', enviada.observacaoEditor],
+              ['Roteiro', enviada.roteiro],
+              ['Cabeça', enviada.cabeca],
+              ['Sonora', enviada.sonora],
+              ['Informações', enviada.informacoes],
+              ['Roteiro escrito', enviada.roteiroEscrito],
+              ['GC / Lettering', enviada.gcLettering],
+              ['Material em SSD', enviada.materialSsd],
+              ['Referências visuais', enviada.referenciasVisuais],
+            ] as const
+          ).map(([rotulo, valor]) =>
+            valor ? (
+              <div key={rotulo} className="col-span-full">
+                <Detalhe rotulo={rotulo} valor={valor} multiline />
+              </div>
+            ) : null,
           )}
         </div>
       )}
