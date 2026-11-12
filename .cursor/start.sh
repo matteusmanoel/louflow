@@ -15,7 +15,8 @@ if command -v update-alternatives >/dev/null 2>&1; then
 fi
 
 if ! docker info >/dev/null 2>&1 && [ -S /var/run/docker.sock ]; then
-  sudo chmod 666 /var/run/docker.sock || true
+  sudo chgrp docker /var/run/docker.sock || true
+  sudo chmod 660 /var/run/docker.sock || true
 fi
 
 if ! docker info >/dev/null 2>&1; then
@@ -30,19 +31,23 @@ fi
 for _ in $(seq 1 60); do
   docker info >/dev/null 2>&1 && break
   if [ -S /var/run/docker.sock ]; then
-    sudo chmod 666 /var/run/docker.sock || true
+    sudo chgrp docker /var/run/docker.sock || true
+    sudo chmod 660 /var/run/docker.sock || true
   fi
   sleep 1
 done
 docker info >/dev/null 2>&1 || { echo "Docker não subiu"; exit 1; }
 
 if [ ! -f .env.local ]; then
-  cat > .env.local <<'ENVEOF'
+  pepper="$(openssl rand -hex 32)"
+  cron="$(openssl rand -hex 32)"
+  meta="$(openssl rand -hex 32)"
+  cat > .env.local <<ENVEOF
 DATABASE_URL=postgresql://louflow:louflow@127.0.0.1:54329/louflow
 DATABASE_URL_TEST=postgresql://louflow:louflow@127.0.0.1:54329/louflow_test
-PIN_PEPPER=pepper-de-teste-com-mais-de-32-caracteres-0001
-CRON_SECRET=segredo-de-teste
-META_TOKEN_KEY=chave-de-teste-meta-com-32-caracteres
+PIN_PEPPER=${pepper}
+CRON_SECRET=${cron}
+META_TOKEN_KEY=${meta}
 ENVEOF
 fi
 
@@ -50,6 +55,8 @@ set -a
 # shellcheck disable=SC1091
 source .env.local
 set +a
+unset DATABASE_URL_UNPOOLED DATABASE_URL_MIGRATE_DEVELOP DATABASE_URL_MIGRATE_MAIN \
+  SEED_ALLOW_REMOTE SEED_REMOTE_HOSTS || true
 
 url_host_port() {
   python3 -c 'from urllib.parse import urlparse; import sys
@@ -80,15 +87,13 @@ exige_compose_local() {
 
 exige_compose_local DATABASE_URL "${DATABASE_URL:-}"
 exige_compose_local DATABASE_URL_TEST "${DATABASE_URL_TEST:-}"
-if [ -n "${DATABASE_URL_UNPOOLED:-}" ]; then
-  exige_compose_local DATABASE_URL_UNPOOLED "$DATABASE_URL_UNPOOLED"
-  unset DATABASE_URL_UNPOOLED
-fi
+
+pnpm exec tsx -e "import { validarDestinoSeed } from './db/seed-guard.ts'; validarDestinoSeed(process.env.DATABASE_URL ?? '', { SEED_ALLOW_REMOTE: process.env.SEED_ALLOW_REMOTE, SEED_REMOTE_HOSTS: process.env.SEED_REMOTE_HOSTS })"
 
 pnpm db:up
 pnpm db:migrate
 pnpm db:seed
-pnpm exec tsx --conditions=react-server --env-file=.env.local .cursor/pin-sintetico.ts
+pnpm exec tsx --conditions=react-server .cursor/pin-sintetico.ts
 
 pronto() {
   curl -sf -o /dev/null --max-time 2 http://127.0.0.1:3000 >/dev/null 2>&1

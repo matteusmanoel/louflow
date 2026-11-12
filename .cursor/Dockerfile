@@ -7,15 +7,18 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates curl gnupg git sudo tmux jq unzip openssh-server \
+      ca-certificates curl gnupg git sudo tmux jq unzip xz-utils openssh-server \
       build-essential python3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Node 24 (azure-pipelines.yml usa 24.x; engines: >=22). pnpm pinado abaixo — não rode corepack enable no install.
+# Node 24 tarball oficial com SHA256 (sem curl|bash do NodeSource). pnpm pinado abaixo — não rode corepack enable no install.
+ARG NODE_VERSION=24.22.3
+ARG NODE_SHA256=4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb
 ARG PNPM_VERSION=11.28.6
-RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/* \
+RUN curl -fsSLo /tmp/node.tar.xz "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+    && echo "${NODE_SHA256}  /tmp/node.tar.xz" | sha256sum -c - \
+    && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 --no-same-owner \
+    && rm /tmp/node.tar.xz \
     && corepack enable \
     && corepack prepare pnpm@${PNPM_VERSION} --activate
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
