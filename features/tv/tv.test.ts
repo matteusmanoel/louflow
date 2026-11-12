@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { carregarDadosTv } from './consultas';
+import { demandaAtrasada } from '@/features/status/atraso';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '../../tests/helpers/db';
 
 usarBancoLimpo();
@@ -175,6 +176,29 @@ describe('carregarDadosTv', () => {
     expect(dados.alertas.itens.map((item) => String(item.titulo))).not.toContain('Na aprovação');
     expect(dados.resumoMes.aguardandoAprovacao).toBe(1);
     expect(dados.resumoMes.semEditor).toBeGreaterThan(0);
+  });
+
+  it('o cartão da TV só marca atraso onde o contador conta (uma regra para todos)', async () => {
+    const sql = sqlTeste();
+    const u = await criarUsuario();
+    const status = ['Não iniciada', 'Em execução', 'Pausada', 'Aprovação', 'Ajustes solicitados'];
+
+    for (const [i, s] of status.entries()) {
+      await sql`
+        INSERT INTO demands (id, title, format, status, post_date, created_by)
+        VALUES (${`LFtv05${i}`}, ${`Vencida ${s}`}, 'Reels', ${s},
+          (timezone('America/Sao_Paulo', now()))::date - 6, ${u.id})
+      `;
+    }
+
+    const dados = await carregarDadosTv(sql);
+    const marcadasNoCartao = dados.demandasPendentes.filter((d) => demandaAtrasada(String(d.status), d.diasParaPrazo === null ? null : Number(d.diasParaPrazo)));
+
+    expect(dados.demandasPendentes).toHaveLength(status.length);
+    expect(marcadasNoCartao.map((d) => String(d.status))).not.toContain('Aprovação');
+    expect(marcadasNoCartao).toHaveLength(Number(dados.resumoMes.atrasadas));
+    expect(marcadasNoCartao).toHaveLength(Number(dados.alertas.totalAtrasadas));
+    expect(dados.resumoMes.atrasadas).toBe(4);
   });
 
   it('entrega recente não carrega link nem motivo', async () => {
