@@ -10,6 +10,10 @@ async function main() {
     SEED_ALLOW_REMOTE: process.env.SEED_ALLOW_REMOTE,
     SEED_REMOTE_HOSTS: process.env.SEED_REMOTE_HOSTS,
   });
+  const destino = new URL(url);
+  if (destino.port !== '54329') {
+    throw new Error('Boot recusado: DATABASE_URL não usa a porta 54329 do compose.');
+  }
   const sql = postgres(url, { max: 1, onnotice: () => {} });
   try {
     const [row] = await sql<{ n: number }[]>`
