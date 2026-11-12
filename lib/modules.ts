@@ -24,7 +24,7 @@ const admin = (u: UsuarioSessao) => u.perfil === 'Administrador';
 export const MODULOS: readonly Modulo[] = [
   { slug: 'dashboard', rotulo: 'Dashboard', grupo: 'Acompanhamento', fatia: 'S2-02 #11574', permitido: naoPremios },
   { slug: 'demandas', rotulo: 'Demandas', grupo: 'Produção', fatia: 'S1-02 #11557', permitido: naoPremios },
-  { slug: 'drive', rotulo: 'Drive', grupo: 'Produção', fatia: 'arquivos', permitido: naoPremios },
+  { slug: 'drive', rotulo: 'Drive', grupo: 'Produção', fatia: 'S4-02', permitido: naoPremios },
   { slug: 'fichas', rotulo: 'Fila de Fichas', grupo: 'Produção', fatia: 'S1-02 #11557', permitido: (u) => u.perfil === 'Administrador' || u.perfil === 'Editor' },
   { slug: 'ficha-tecnica', rotulo: 'Ficha Técnica', grupo: 'Produção', fatia: 'S1-11 #11566', permitido: (u) => naoPremios(u) && u.permissoes.enviarFicha },
   { slug: 'aprovacoes', rotulo: 'Aprovações', grupo: 'Produção', fatia: 'S1-14 #11569', permitido: (u) => u.perfil === 'Administrador' || u.perfil === 'Influencer' || u.ehAprovadorDelegado },
