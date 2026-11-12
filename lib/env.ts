@@ -49,11 +49,15 @@ export const env = {
   get cotaDriveBytes() {
     return lerCotaBytes(process.env.DRIVE_COTA_BYTES);
   },
-  /** Bucket privado de arquivos. Ausente = a tela só aceita link externo. */
+  /**
+   * Bucket privado de arquivos. Ausente = a tela só aceita link externo.
+   * `roleArn` (AWS_ROLE_ARN) liga as credenciais OIDC do Vercel; ausente = cadeia padrão da AWS (perfil/SSO local).
+   */
   get armazenamento() {
     const bucket = process.env.S3_BUCKET?.trim() ?? '';
     if (!bucket) return null;
     const regiao = process.env.AWS_REGION?.trim() || process.env.AWS_DEFAULT_REGION?.trim() || 'us-east-1';
-    return { bucket, regiao };
+    const roleArn = process.env.AWS_ROLE_ARN?.trim() || null;
+    return { bucket, regiao, roleArn };
   },
 };
