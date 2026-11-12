@@ -250,7 +250,7 @@ O Vercel Cron do plano Hobby roda só uma vez por dia. Por isso um agendador ext
 | Ambiente | Gatilho | Banco |
 |---|---|---|
 | Preview | Vercel for GitHub gera preview por PR (projeto `louflow`). Sem CI nem migrate automático | Branch Neon `preview` (sintético). Conferir que o Preview da Vercel **não** aponta para produção |
-| Produção | Push/merge em `main` dispara deploy da Vercel. **Migrations no Neon são manuais, antes do merge em `main`**: `DATABASE_URL_UNPOOLED=<neon> pnpm db:migrate` | Branch Neon principal |
+| Produção | Deploy da Vercel no push em `main` (Production Branch **a confirmar**). **Migrations no Neon (develop/preview/main) são manuais, pela TI, antes do merge em `main`**: `DATABASE_URL_UNPOOLED=<neon> pnpm db:migrate`. Agentes não têm credencial Neon | Branch Neon principal |
 
 Migrations são **aditivas** e devem ser aplicadas **antes** do deploy, para a versão anterior continuar funcionando durante a troca. O `azure-pipelines.yml` (legado) não está ligado a este repositório. Até existir `.github/workflows/ci.yml` (PR separado, zona protegida, TI), o gate de qualidade é o §5 do `AGENTS.md`.
 

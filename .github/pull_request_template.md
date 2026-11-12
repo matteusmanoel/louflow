@@ -39,6 +39,7 @@ Arquivos fora da pasta própria da fatia (justificar cada um):
 - [ ] Migration nova **aditiva**: `db/migrations/AAAAMMDDHHMM_<taskId>_<slug>.sql` (nenhuma existente editada)
 - [ ] Nova chave de Permissão (`CHECK` + `lib/permissions.ts` no mesmo PR)
 - [ ] Sem dado real em seed/fixture/teste (só `@exemplo.test`)
+- [ ] Migration aplicada no Neon preview (TI; agentes não têm credencial)
 
 ## Riscos e rollback
 - Risco principal:
