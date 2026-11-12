@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 exec 9>/tmp/louflow-start.lock
-flock 9
+flock -w 300 9 || { echo "start.sh já em execução"; exit 1; }
 
 # iptables-legacy: necessário no fallback da imagem padrão do Cursor (o Dockerfile já faz isso).
 if command -v update-alternatives >/dev/null 2>&1; then
@@ -25,7 +25,7 @@ fi
 
 if ! docker info >/dev/null 2>&1; then
   tmux has-session -t dockerd 2>/dev/null || \
-    tmux new-session -d -s dockerd "sudo dockerd --host unix:///var/run/docker.sock --group docker"
+    tmux new-session -d -s dockerd "sudo dockerd --host unix:///var/run/docker.sock --group docker" 9>&-
 fi
 
 for _ in $(seq 1 60); do
@@ -104,7 +104,7 @@ if ! pronto; then
     tmux kill-session -t dev 2>/dev/null || true
   fi
   tmux has-session -t dev 2>/dev/null || tmux new-session -d -s dev \
-    "cd '$ROOT' && set -a && source .env.local && set +a && export NEXT_TELEMETRY_DISABLED=1 && exec pnpm exec next dev --hostname 0.0.0.0 --port 3000"
+    "cd '$ROOT' && set -a && source .env.local && set +a && export NEXT_TELEMETRY_DISABLED=1 && exec pnpm exec next dev --hostname 0.0.0.0 --port 3000" 9>&-
 fi
 
 for _ in $(seq 1 90); do

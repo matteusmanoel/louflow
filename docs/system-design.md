@@ -13,7 +13,7 @@
 | Aplicação | Next.js App Router, Server Components e Server Actions, TypeScript | Decidido |
 | Hosting | Vercel, plano gratuito | Decidido |
 | Banco | Neon Postgres, plano gratuito | Decidido |
-| Deploy | CI GitHub Actions: **pendente**. Gate manual: `pnpm lint` / `typecheck` / `test:db` / `build` (AGENTS.md §5). CD (Neon + Vercel) **ainda não configurado** neste repositório. `azure-pipelines.yml` é legado. Agentes de nuvem não disparam CD | Atualizado |
+| Deploy | Preview Vercel por PR (projeto `louflow`, conta pessoal). CI (lint/typecheck/`test:db`/build) **pendente** no GitHub. Migrations no Neon: **manuais, antes do merge em `main`**. `azure-pipelines.yml` é legado. Agentes não disparam CD | Atualizado |
 | Repo | GitHub `matteusmanoel/louflow` (oficial). Ainda não há projeto nem repositório do LouFlow no Azure DevOps | Atualizado |
 | WhatsApp | uazapi, instância do setor. Sem credencial o aviso só é registrado | Decidido |
 | Agendador | cron-job.org chamando rotas protegidas por segredo | Decidido (P5) |
@@ -249,10 +249,10 @@ O Vercel Cron do plano Hobby roda só uma vez por dia. Por isso um agendador ext
 
 | Ambiente | Gatilho | Banco |
 |---|---|---|
-| Preview | Ainda não há CD automático no GitHub; o preview da Vercel, se existir, é conta pessoal | Dados sintéticos; sem dados pessoais |
-| Produção | Merge em `main` (humano). CD Neon+Vercel **ainda não configurado** neste repositório | Branch Neon principal, quando o CD existir |
+| Preview | Vercel for GitHub gera preview por PR (projeto `louflow`). Sem CI nem migrate automático | Branch Neon `preview` (sintético). Conferir que o Preview da Vercel **não** aponta para produção |
+| Produção | Push/merge em `main` dispara deploy da Vercel. **Migrations no Neon são manuais, antes do merge em `main`**: `DATABASE_URL_UNPOOLED=<neon> pnpm db:migrate` | Branch Neon principal |
 
-O `azure-pipelines.yml` descreve um CI/CD legado (lint/typecheck/`test:db`/build; migrate Neon + `vercel deploy` em `develop`/`main`). **Não está ligado** a este repositório GitHub. Até existir `.github/workflows/ci.yml` (PR separado, zona protegida, TI), o gate é o §5 do `AGENTS.md`, rodado à mão.
+Migrations são **aditivas** e devem ser aplicadas **antes** do deploy, para a versão anterior continuar funcionando durante a troca. O `azure-pipelines.yml` (legado) não está ligado a este repositório. Até existir `.github/workflows/ci.yml` (PR separado, zona protegida, TI), o gate de qualidade é o §5 do `AGENTS.md`.
 
 Estratégia de branches no GitHub: `develop` (padrão de PRs) e `main` (produção). O padrão Loumar em outros repositórios inclui `staging`; o LouFlow não usa `staging` neste repositório.
 
