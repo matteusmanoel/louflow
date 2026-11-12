@@ -11,6 +11,8 @@ export const ALERTA_PRAZO_DIAS = 2;
 export const ENTREGAS_DIAS = 7;
 
 export type DemandaRanking = {
+  /** Identifica a pessoa; sem ele, agrupa pelo rótulo. */
+  editorId?: string;
   editor: string;
   formato: string;
   ajustes: number;
@@ -20,12 +22,14 @@ export type DemandaRanking = {
 };
 
 export type CaptacaoRanking = {
+  editorId?: string;
   editor: string;
   staff: boolean;
   disputa: boolean;
 };
 
 export type ItemRanking = {
+  editorId?: string;
   editor: string;
   nota: number;
   quantidade: number;
@@ -33,6 +37,8 @@ export type ItemRanking = {
   percentualAprovacao: number;
   tempoMedioHoras: number;
   demandasNota: number;
+  /** 1.ª, 2.ª… entre quem disputa e tem amostra válida (2+ entregas); null para staff e amostra curta. */
+  posicao?: number | null;
 };
 
 export type DemandaProdutividade = {
@@ -65,6 +71,7 @@ export type CargaEditor = {
 };
 
 type Acumulo = {
+  editorId?: string;
   editor: string;
   quantidade: number;
   quantidadeNota: number;
@@ -147,25 +154,36 @@ function vazio(): Omit<Acumulo, 'editor' | 'staff' | 'disputa'> {
   };
 }
 
-export function calcularRanking(demandas: DemandaRanking[], captacoes: CaptacaoRanking[]): ItemRanking[] {
+export type OpcoesRanking = {
+  /** Quantos disputantes entram. O slide da TV usa o padrão; o Ranking completo passa Infinity. */
+  limiteDisputantes?: number;
+};
+
+export function calcularRanking(
+  demandas: DemandaRanking[],
+  captacoes: CaptacaoRanking[],
+  opcoes: OpcoesRanking = {},
+): ItemRanking[] {
+  const limiteDisputantes = opcoes.limiteDisputantes ?? LINHAS_POR_SLIDE - 1;
   const porEditor = new Map<string, Acumulo>();
 
-  function obter(editor: string, staff: boolean, disputa: boolean) {
-    const atual = porEditor.get(editor);
+  function obter(editor: string, staff: boolean, disputa: boolean, editorId?: string) {
+    const chave = editorId ?? editor;
+    const atual = porEditor.get(chave);
     if (atual) {
       atual.staff = atual.staff || staff;
       atual.disputa = atual.disputa || disputa;
       return atual;
     }
-    const criado: Acumulo = { editor, staff, disputa, ...vazio() };
-    porEditor.set(editor, criado);
+    const criado: Acumulo = { editorId, editor, staff, disputa, ...vazio() };
+    porEditor.set(chave, criado);
     return criado;
   }
 
   for (const demanda of demandas) {
     const editor = demanda.editor.trim();
     if (!editor || (!demanda.staff && !demanda.disputa)) continue;
-    const item = obter(editor, demanda.staff, demanda.disputa);
+    const item = obter(editor, demanda.staff, demanda.disputa, demanda.editorId);
     item.quantidade += 1;
     if (ehCriativo(demanda.formato)) continue;
     item.quantidadeNota += 1;
@@ -180,7 +198,7 @@ export function calcularRanking(demandas: DemandaRanking[], captacoes: CaptacaoR
   for (const captacao of captacoes) {
     const editor = captacao.editor.trim();
     if (!editor || (!captacao.staff && !captacao.disputa)) continue;
-    const item = obter(editor, captacao.staff, captacao.disputa);
+    const item = obter(editor, captacao.staff, captacao.disputa, captacao.editorId);
     item.quantidade += 1;
     item.quantidadeNota += 1;
   }
@@ -220,6 +238,7 @@ export function calcularRanking(demandas: DemandaRanking[], captacoes: CaptacaoR
   const comNota = medidos.map((item) => {
     const { nota, percentual, tempo } = notaDe(item);
     return {
+      editorId: item.editorId,
       editor: item.editor,
       nota,
       quantidade: item.quantidade,
@@ -243,7 +262,9 @@ export function calcularRanking(demandas: DemandaRanking[], captacoes: CaptacaoR
     .filter((item) => item.staff)
     .sort((a, b) => a.editor.localeCompare(b.editor, 'pt-BR'));
 
-  return disputam.slice(0, LINHAS_POR_SLIDE - 1).concat(staff).map((item) => ({
+  return disputam.slice(0, limiteDisputantes).concat(staff).map((item) => ({
+    editorId: item.editorId,
+    posicao: !item.staff && item.amostraValida ? disputam.indexOf(item) + 1 : null,
     editor: item.editor,
     nota: item.nota,
     quantidade: item.quantidade,
