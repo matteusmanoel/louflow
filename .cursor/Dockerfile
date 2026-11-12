@@ -1,5 +1,5 @@
 # .cursor/Dockerfile — LouFlow (Cursor Cloud Agents)
-# Ubuntu 24.04 + Node 24 (igual ao azure-pipelines.yml) + Docker com fuse-overlayfs/iptables-legacy
+# Ubuntu 24.04 + Node 24 (mesma linha do stage ci em azure-pipelines.yml, legado) + Docker aninhado
 # (receita da doc do Cursor para Docker aninhado; necessário para o Postgres de teste).
 # Não COPY o repositório: o checkout é feito depois, fora desta imagem.
 FROM ubuntu:24.04
@@ -11,12 +11,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential python3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Node 24 (CI usa 24.x; engines do package.json: >=22). pnpm vem do corepack (packageManager = pnpm@11.28.6).
+# Node 24 (azure-pipelines.yml usa 24.x; engines: >=22). pnpm pinado abaixo — não rode corepack enable no install.
+ARG PNPM_VERSION=11.28.6
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/* \
     && corepack enable \
-    && corepack prepare pnpm@11.28.6 --activate
+    && corepack prepare pnpm@${PNPM_VERSION} --activate
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 ENV COREPACK_DEFAULT_TO_LATEST=0
 
@@ -37,13 +38,18 @@ RUN update-alternatives --set iptables /usr/sbin/iptables-legacy && \
 
 # Usuário não-root com docker e sudo sem senha (padrão da doc do Cursor).
 # ubuntu:24.04 já tem o usuário ubuntu — não falhar se existir.
-RUN echo 'PasswordAuthentication no\nChallengeResponseAuthentication no\nUsePAM no' > /etc/ssh/sshd_config.d/disable_password_auth.conf
+RUN printf '%s\n' 'PasswordAuthentication no' 'ChallengeResponseAuthentication no' 'UsePAM no' \
+      > /etc/ssh/sshd_config.d/disable_password_auth.conf
 RUN id -u ubuntu >/dev/null 2>&1 || useradd -m -s /bin/bash ubuntu
-RUN groupadd -f docker && usermod -aG docker ubuntu && usermod -aG sudo ubuntu
-RUN echo "ubuntu ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu
+RUN groupadd -f docker && usermod -aG docker ubuntu
+RUN printf '%s\n' 'ubuntu ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/ubuntu \
+    && chmod 0440 /etc/sudoers.d/ubuntu \
+    && visudo -cf /etc/sudoers.d/ubuntu
 
 # Substitui o shim do corepack: sem isso, `pnpm -v` no login shell caía em 11.24.0 ou baixava 12.x.
-RUN npm install -g pnpm@11.28.6 --force && pnpm --version
+# O install do environment.json NÃO deve rodar `corepack enable` (EACCES em /usr/bin como ubuntu).
+ARG PNPM_VERSION=11.28.6
+RUN npm install -g "pnpm@${PNPM_VERSION}" --force && pnpm --version
 
 USER ubuntu
 WORKDIR /home/ubuntu

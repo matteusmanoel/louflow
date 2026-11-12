@@ -17,6 +17,7 @@ exports/
 !.cursor/environment.json
 !.cursor/Dockerfile
 !.cursor/start.sh
+!.cursor/pin-sintetico.ts
 manifest/
 docs/reports/
 # Descoberta contém IDs de implantação e nomes do legado

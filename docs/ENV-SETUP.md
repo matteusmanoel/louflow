@@ -8,7 +8,8 @@ Documentação de referência: [Cloud Agent setup](https://cursor.com/docs/cloud
 |---|---|
 | `.cursor/environment.json` | Config as code: imagem, `install`, `start`, porta 3000 |
 | `.cursor/Dockerfile` | Ubuntu 24.04, Node 24, pnpm via corepack, Docker aninhado |
-| `.cursor/start.sh` | Boot: Docker, Postgres local, migrate, seed, PIN sintético, `next dev` em tmux `dev` |
+| `.cursor/start.sh` | Boot: Docker, Postgres local (só host/porta do compose), migrate, seed, PIN sintético, `next dev` em tmux `dev` |
+| `.cursor/pin-sintetico.ts` | Define o PIN `482916` nos `@exemplo.test` sem PIN |
 | `AGENTS.md` (§ Cursor Cloud) | Regras para o agente na VM |
 | `.github/pull_request_template.md` | Template de PR no GitHub |
 
@@ -18,10 +19,10 @@ Depois do merge deste PR, no painel Cloud Agents → Environments, aponte a loca
 
 ## Stack
 
-- **Node 24** (igual ao `azure-pipelines.yml`; `engines` pede `>=22`).
-- **pnpm 11.28.6** via corepack (`packageManager` no `package.json`). `install`: `corepack enable && corepack install && pnpm install --frozen-lockfile`.
+- **Node 24** (`engines` pede `>=22`). **pnpm 11.28.6** pinado na imagem (`npm install -g`, não `corepack enable` no `install`).
+- `install` do ambiente: `pnpm install --frozen-lockfile` (como `ubuntu`). CI GitHub Actions **pendente**; o gate é o §5 do `AGENTS.md`.
 - **Postgres 17 via Docker** (`docker-compose.yml`, porta **54329**, usuário/senha/banco `louflow`, dados em tmpfs). Docker aninhado usa `fuse-overlayfs` + `iptables-legacy`.
-- `start.sh` sobe o daemon se preciso, cria `.env.local` local se faltar, roda `pnpm db:up`, `pnpm db:migrate` e `pnpm db:seed`, define o PIN sintético `482916` nos `@exemplo.test` sem PIN (o mesmo de `e2e/contas.ts` / `tests/helpers/db.ts`) e espera o Next.js em `http://127.0.0.1:3000`.
+- `start.sh` sobe o daemon se preciso, cria `.env.local` sintético **só se faltar** (não sobrescreve um de desenvolvedor), recusa `DATABASE_URL` / `DATABASE_URL_TEST` / `DATABASE_URL_UNPOOLED` que não sejam o compose local, roda `pnpm db:up`, `pnpm db:migrate`, `pnpm db:seed` e `.cursor/pin-sintetico.ts`, e espera o Next.js na porta 3000.
 - Testes: `pnpm test:db` recria `louflow_test` no mesmo Postgres. `tests/setup-env.ts` já fixa pepper, cron secret e chave Meta — **os testes não precisam de nenhum segredo**.
 - E2E: não está no `pnpm check` nem no CI. Quando a fatia for S1-17, `pnpm exec playwright install --with-deps chromium` e, com o servidor do boot já em `:3000`, `E2E_BASE_URL=http://127.0.0.1:3000 pnpm exec playwright test`. O Next 16 recusa um segundo `next dev` no mesmo `.next` (porta 3001 falha se `:3000` já estiver no ar).
 
@@ -41,13 +42,13 @@ Depois do merge deste PR, no painel Cloud Agents → Environments, aponte a loca
 ## Login sintético (UI na VM)
 
 - E-mail: `admin@exemplo.test`
-- PIN: `482916` (sintético; igual ao E2E). Sem `must_reset_pin` depois do `start.sh`.
+- PIN: `482916` (sintético; igual ao E2E). Sem `must_reset_pin` depois do `pin-sintetico.ts`.
 - Perfil Prêmios: `premios@exemplo.test` / o mesmo PIN.
 
 ## Riscos
 
 1. **Nunca apontar para Neon/Vercel/produção.** O `.env.local` de uma máquina local pode ter chaves reais; não copie nem cadastre como secret.
 2. **Fonte de verdade no GitHub.** O repositório oficial é `matteusmanoel/louflow`. PRs dos agentes no GitHub contra `develop` são os definitivos. Ainda não há projeto nem repositório do LouFlow no Azure DevOps. `AB#` do Azure Boards é opcional.
-3. **Zonas protegidas** (`lib/**`, `db/migrations/**`, `azure-pipelines.yml`, `package.json`, lockfile…): ver `AGENTS.md` §2 e `docs/pr-review-guide.md`.
+3. **Zonas protegidas:** `AGENTS.md` §2 e `docs/pr-review-guide.md` §1.1 (inclui `.cursor/**`, `.github/**`, `docker-compose.yml`, `scripts/db/**`).
 4. O `AGENTS.md` cita `/Users/matteusmanoel/Projects/Loumar/louflow/demandas-edits/` como legado somente local. O agente de nuvem **não terá** esse diretório; use o PRD.
-5. Egress: se o time usar allowlist, liberar `registry.npmjs.org`, `registry-1.docker.io`/`docker.io` (imagem `postgres:17-alpine`), `deb.nodesource.com`, `download.docker.com` (Build) e `github.com`.
+5. Egress, se o time usar allowlist: `registry.npmjs.org`, `docker.io`, `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com`, `deb.nodesource.com`, `download.docker.com`, `archive.ubuntu.com`, `security.ubuntu.com`, `github.com`, `cdn.playwright.dev` (E2E). A imagem `postgres:17-alpine` é puxada no boot frio (`pnpm db:up`), não no `install`.

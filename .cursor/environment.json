@@ -4,7 +4,7 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "install": "corepack enable && corepack install && pnpm install --frozen-lockfile",
+  "install": "pnpm install --frozen-lockfile",
   "start": "bash .cursor/start.sh",
   "ports": [
     { "name": "web", "port": 3000 }

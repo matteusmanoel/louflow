@@ -13,7 +13,7 @@
 | Aplicação | Next.js App Router, Server Components e Server Actions, TypeScript | Decidido |
 | Hosting | Vercel, plano gratuito | Decidido |
 | Banco | Neon Postgres, plano gratuito | Decidido |
-| Deploy | Arquivo `azure-pipelines.yml`: CI (lint, typecheck, `test:db`, build) e CD (`vercel deploy --prebuilt`). PRs no GitHub; merge em `main` → produção. Agentes de nuvem não disparam CD nem falam com Neon/Vercel | Atualizado |
+| Deploy | CI GitHub Actions: **pendente**. Gate manual: `pnpm lint` / `typecheck` / `test:db` / `build` (AGENTS.md §5). CD (Neon + Vercel) **ainda não configurado** neste repositório. `azure-pipelines.yml` é legado. Agentes de nuvem não disparam CD | Atualizado |
 | Repo | GitHub `matteusmanoel/louflow` (oficial). Ainda não há projeto nem repositório do LouFlow no Azure DevOps | Atualizado |
 | WhatsApp | uazapi, instância do setor. Sem credencial o aviso só é registrado | Decidido |
 | Agendador | cron-job.org chamando rotas protegidas por segredo | Decidido (P5) |
@@ -208,7 +208,7 @@ Use o driver serverless da Neon com transação interativa (WebSocket ou pool). 
 | PIN | Digest com segredo nas Script Properties | Hash lento de senha, com sal, numa biblioteca padrão de mercado. Pepper numa variável de ambiente da Vercel. **Reset forçado de todos no lançamento** |
 | Escopo Prêmios | `validarSessao_(token, 'sorteios')` | Middleware: Perfil Prêmios só alcança `/sorteios` |
 
-Segredos ficam **somente** nas variáveis de ambiente da Vercel e da Pipeline: banco, pepper do PIN, `CRON_SECRET`, token da uazapi e `META_TOKEN_KEY` (cifra o token de cada Business Manager). Nunca vão para o repositório, para logs ou para documentos.
+Segredos ficam **somente** nas variáveis de ambiente da Vercel (e, quando o CD existir, da pipeline): banco, pepper do PIN, `CRON_SECRET`, token da uazapi e `META_TOKEN_KEY` (cifra o token de cada Business Manager). Nunca vão para o repositório, para logs ou para documentos.
 
 ## 8. Rotinas agendadas
 
@@ -249,18 +249,10 @@ O Vercel Cron do plano Hobby roda só uma vez por dia. Por isso um agendador ext
 
 | Ambiente | Gatilho | Banco |
 |---|---|---|
-| Preview | PR aberto ou atualizado | Branch Neon `preview`, com dados sintéticos e sem dados pessoais |
-| Produção | Merge em `main` | Branch Neon principal |
+| Preview | Ainda não há CD automático no GitHub; o preview da Vercel, se existir, é conta pessoal | Dados sintéticos; sem dados pessoais |
+| Produção | Merge em `main` (humano). CD Neon+Vercel **ainda não configurado** neste repositório | Branch Neon principal, quando o CD existir |
 
-Etapas da Pipeline, em ordem:
-
-1. Instalar dependências.
-2. Rodar lint, typecheck e testes.
-3. `vercel build`.
-4. Só em `main`: aplicar as migrations pendentes.
-5. `vercel deploy --prebuilt`, com `--prod` em `main`.
-
-Uma falha em qualquer etapa interrompe o deploy. Migrations rodam **antes** do deploy e são aditivas, para que a versão anterior continue funcionando durante a troca.
+O `azure-pipelines.yml` descreve um CI/CD legado (lint/typecheck/`test:db`/build; migrate Neon + `vercel deploy` em `develop`/`main`). **Não está ligado** a este repositório GitHub. Até existir `.github/workflows/ci.yml` (PR separado, zona protegida, TI), o gate é o §5 do `AGENTS.md`, rodado à mão.
 
 Estratégia de branches no GitHub: `develop` (padrão de PRs) e `main` (produção). O padrão Loumar em outros repositórios inclui `staging`; o LouFlow não usa `staging` neste repositório.
 

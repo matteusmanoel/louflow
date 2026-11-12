@@ -38,7 +38,8 @@ Alterar exige justificativa no PR e revisão explícita (ver `docs/pr-review-gui
 `lib/**`, `db/migrations/**` (só arquivos novos), `db/runner.ts`, `proxy.ts`, `features/acesso/**`,
 `features/status/**` (dona: S1-10), `features/demandas/secoes.ts`, `app/api/{tv,cron,sync,sessao}/**`,
 `app/(app)/layout.tsx`, `app/layout.tsx`, `next.config.ts`, `azure-pipelines.yml`, `package.json`, `pnpm-lock.yaml`,
-`eslint.config.mjs`, `tsconfig.json`, `vitest.config.mts`.
+`eslint.config.mjs`, `tsconfig.json`, `vitest.config.mts`,
+`.cursor/**`, `.github/**`, `docker-compose.yml`, `scripts/db/**`.
 
 Dependência nova em `package.json` só com justificativa de uma linha no PR.
 
@@ -100,47 +101,11 @@ Use para conferir regras de negócio. Nunca copie dados, nunca faça commit dess
 
 ## Cursor Cloud specific instructions
 
-- VM Ubuntu com o repositório na branch pedida. Imagem: Node 24, pnpm `11.28.6` (corepack), Docker. Veja `.cursor/environment.json` e [`docs/ENV-SETUP.md`](docs/ENV-SETUP.md).
-- Boot: `.cursor/start.sh` sobe o Postgres local (`docker-compose.yml`, porta 54329, tmpfs), roda `pnpm db:migrate` e `pnpm db:seed`, define o PIN sintético `482916` nos `@exemplo.test` sem PIN e deixa `next dev` na porta 3000 (tmux `dev`). O `.env.local` de nuvem só tem valores locais e sintéticos.
-- Login de UI: `admin@exemplo.test` / `482916` (sintético; o mesmo de `e2e/contas.ts`).
-- **Nenhum segredo real existe na VM** e nenhum deve ser pedido. Sem `UAZAPI_*` e sem `S3_BUCKET` o app degrada de propósito (aviso só registrado; Drive só por link).
-- Gate antes de abrir o PR: `pnpm lint && pnpm typecheck && pnpm test:db && pnpm build` (§5). E2E só quando a fatia for S1-17 ou a tarefa pedir (`pnpm exec playwright install --with-deps chromium` antes). Com o `next dev` do boot já em `:3000`, use `E2E_BASE_URL=http://127.0.0.1:3000 pnpm exec playwright test` — o Next 16 recusa um segundo `next dev` no mesmo `.next`.
-- Branch `feature/<taskId>-<slug>` a partir de `develop`; commits `feat(<fatia>): …`; **proibido** `Co-authored-by`. O PR do agente é no GitHub, contra `develop`, e é o PR definitivo.
-- Não faça merge, não toque em `main`, não rode nada que fale com Neon/Vercel/WhatsApp/S3, não edite `azure-pipelines.yml`.
+Detalhes do boot, secrets e egress: [`docs/ENV-SETUP.md`](docs/ENV-SETUP.md). Ambiente: `.cursor/environment.json`.
 
-## Papéis de revisão (bots revisores)
-
-Cada revisor lê só a sua área, cita arquivo e linha e segue `docs/pr-review-guide.md` (§4: aprovar / comentar / `Waiting for author`). Zona protegida (§1.1) nunca é aprovada por bot: marcar a TI.
-
-### UI e acessibilidade
-- [ ] Só tokens de `app/globals.css`/`components/ui`; sem hex novo; tema claro **e** escuro (`[data-tema='escuro']`).
-- [ ] `<Button>` para ação, `<Badge>` para status; `AlertDialog` em ação destrutiva (nunca `window.confirm`); toasts via `lib/toast.ts`.
-- [ ] Exatamente um `h1`; a página não abre outro `<main>`, sem padding/`max-w-*`/`min-w-[…]` ad hoc; sem estouro horizontal em 650 e 390 px.
-- [ ] Ícones Lucide com `aria-hidden` ou `aria-label` no pai; foco visível; sem emoji em controles.
-- [ ] Textos usam o vocabulário do `CONTEXT.md` ("Demanda", "Entrega", "Perfil"…).
-- [ ] Painel de entidade segue `docs/agents/ui-standards.md` §13.3.
-
-### Backend e integrações
-- [ ] Server Action só via `criarAcao` (`lib/action.ts`), ordem Sessão → zod → Permissão → transação → domínio → commit → notificações.
-- [ ] Mutação de Demanda: `SELECT … FOR UPDATE` + `registrarHistorico(tx, …)` na mesma transação; `UPDATE demands SET status` só em `features/status/`.
-- [ ] Páginas/componentes não importam `@/lib/db`; leituras em `features/<fatia>/consultas.ts`.
-- [ ] Notificação só depois do commit; falha de envio não desfaz a operação; jobs de cron idempotentes com assinatura `HandlerJob`.
-- [ ] Restrições `EXCLUDE` traduzidas via `restricoes`, sem varredura prévia.
-- [ ] Testes cobrem comportamento público e casos negativos de Permissão (`tests/helpers/db.ts`).
-
-### Arquitetura e infraestrutura
-- [ ] O PR toca só as pastas da própria fatia (§1); arquivos fora dela estão justificados.
-- [ ] Contratos de `lib/` consumidos, não recriados; `PropsSecaoDemanda` e exports reservados intactos.
-- [ ] Migration nova: arquivo `AAAAMMDDHHMM_<taskId>_<slug>.sql`, aditiva, sem editar as existentes; nova Permissão = `CHECK` + `lib/permissions.ts` no mesmo PR.
-- [ ] `package.json`/lockfile/`azure-pipelines.yml`/`next.config.ts`: justificativa de uma linha e marca da TI.
-- [ ] Pipeline do PR verde (lint, typecheck, `test:db`, build).
-
-### Segurança
-- [ ] Sessão validada antes de qualquer lógica; Permissão checada depois; Sessão nunca vem de argumento.
-- [ ] `/api/tv` com DTO de campos explícitos (sem `SELECT *`/spread); `/api/cron/*` exige `Authorization: Bearer $CRON_SECRET` e devolve 401 sem ele.
-- [ ] Nenhum segredo, connection string, `.env` real, token ou nome/e-mail/link de Drive real no diff, seed, fixture, log ou erro (`registrarErro` não é contornado).
-- [ ] Perfil Prêmios só alcança Sorteios; rota nova declara escopo em `lib/modules.ts` (protegido).
-- [ ] Sem nomes próprios em regra de código (usar Permissão); sem `Co-authored-by`.
+- Login sintético: `admin@exemplo.test` / `482916` (o mesmo de `e2e/contas.ts`). Nenhum segredo real; sem WhatsApp/S3/Neon/Vercel.
+- Gate manual (§5) antes do PR. Ainda **não** há GitHub Actions nem pipeline ADO neste repositório. E2E (S1-17): `pnpm exec playwright install --with-deps chromium` e `E2E_BASE_URL` na porta 3000 se o `next dev` do boot já estiver no ar.
+- PR no GitHub contra `develop`. Sem merge, sem `Co-authored-by`. Revisão: [`docs/pr-review-guide.md`](docs/pr-review-guide.md) (§4). Zona protegida (§2 / guia §1.1), inclusive `.cursor/**` e `.github/**`, nunca é aprovada por bot: marcar a TI.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

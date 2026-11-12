@@ -26,14 +26,13 @@ Arquivos fora da pasta própria da fatia (justificar cada um):
 3. Passos manuais (perfil usado, rota, resultado esperado):
 
 ## Evidências
-- [ ] `pnpm lint` · [ ] `pnpm typecheck` · [ ] `pnpm test:db` · [ ] `pnpm build` (cole o resumo)
+- [ ] `pnpm lint` · [ ] `pnpm typecheck` · [ ] `pnpm test:db` · [ ] `pnpm build` (cole o resumo; gate manual §5 — CI GitHub Actions ainda pendente)
 - Prints/vídeo (tema claro e escuro; 650 px, se houver UI):
-- Preview da pipeline:
 
 ## Zona de risco (docs/pr-review-guide.md §1)
 - [ ] Zona do Osamah (UI/estilos/páginas sem `'use server'` nem `lib/db`)
 - [ ] Requer revisão da TI (Server Action, rota `app/api/`, `lib/`, SQL novo)
-- [ ] **Zona protegida** (`lib/**`, `db/migrations/**`, `proxy.ts`, `features/status|acesso/**`, `azure-pipelines.yml`, `package.json`, lockfile…) — justificativa:
+- [ ] **Zona protegida** — ver `docs/pr-review-guide.md` §1.1 (inclui `.cursor/**`, `.github/**`, `scripts/db/**`) — justificativa:
 
 ## Migrações e dados
 - [ ] Sem migration
@@ -46,10 +45,8 @@ Arquivos fora da pasta própria da fatia (justificar cada um):
 - Como reverter (revert do PR / migration corretiva nova — migration aplicada nunca é editada):
 
 ## Checklist por área
-**UI:** [ ] tokens, sem hex novo · [ ] claro/escuro · [ ] 650/390 px sem estouro · [ ] um `h1` · [ ] vocabulário do CONTEXT.md
-**Backend/integrações:** [ ] `criarAcao` · [ ] Sessão→zod→Permissão→transação · [ ] `FOR UPDATE` + `registrarHistorico` · [ ] notificação após commit · [ ] cron idempotente
-**Arquitetura/infra:** [ ] só a pasta da fatia · [ ] contratos de `lib/` respeitados · [ ] dependência nova justificada · [ ] pipeline verde
-**Segurança:** [ ] Sessão/Permissão em toda ação · [ ] `/api/tv` com DTO · [ ] cron 401 sem `CRON_SECRET` · [ ] nenhum segredo/dado pessoal · [ ] sem `Co-authored-by`
+Invariantes e papéis: `docs/pr-review-guide.md` §2–§4.
+**Arquitetura/infra:** [ ] só a pasta da fatia · [ ] contratos de `lib/` respeitados · [ ] dependência nova justificada · [ ] gate §5 verde (CI GitHub Actions pendente)
 
 ## Revisores a acionar
 - [ ] UI e acessibilidade

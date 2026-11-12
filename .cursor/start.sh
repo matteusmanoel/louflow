@@ -5,12 +5,16 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+exec 9>/tmp/louflow-start.lock
+flock 9
+
+# iptables-legacy: necessário no fallback da imagem padrão do Cursor (o Dockerfile já faz isso).
 if command -v update-alternatives >/dev/null 2>&1; then
   sudo update-alternatives --set iptables /usr/sbin/iptables-legacy >/dev/null 2>&1 || true
   sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy >/dev/null 2>&1 || true
 fi
 
-if [ -S /var/run/docker.sock ]; then
+if ! docker info >/dev/null 2>&1 && [ -S /var/run/docker.sock ]; then
   sudo chmod 666 /var/run/docker.sock || true
 fi
 
@@ -20,14 +24,14 @@ fi
 
 if ! docker info >/dev/null 2>&1; then
   tmux has-session -t dockerd 2>/dev/null || \
-    tmux new-session -d -s dockerd "sudo dockerd --host unix:///var/run/docker.sock"
+    tmux new-session -d -s dockerd "sudo dockerd --host unix:///var/run/docker.sock --group docker"
 fi
 
 for _ in $(seq 1 60); do
+  docker info >/dev/null 2>&1 && break
   if [ -S /var/run/docker.sock ]; then
     sudo chmod 666 /var/run/docker.sock || true
   fi
-  docker info >/dev/null 2>&1 && break
   sleep 1
 done
 docker info >/dev/null 2>&1 || { echo "Docker não subiu"; exit 1; }
@@ -47,43 +51,44 @@ set -a
 source .env.local
 set +a
 
+url_host_port() {
+  python3 -c 'from urllib.parse import urlparse; import sys
+u = urlparse(sys.argv[1])
+print((u.hostname or "") + " " + str(u.port or ""))' "$1"
+}
+
+exige_compose_local() {
+  local nome="$1" url="${2:-}"
+  if [ -z "$url" ]; then
+    echo "Boot recusado: $nome ausente."
+    exit 1
+  fi
+  local host port
+  read -r host port <<<"$(url_host_port "$url")"
+  case "$host" in
+    127.0.0.1|localhost) ;;
+    *)
+      echo "Boot recusado: $nome não aponta para o Postgres local (compose)."
+      exit 1
+      ;;
+  esac
+  if [ "$port" != "54329" ]; then
+    echo "Boot recusado: $nome não usa a porta 54329 do compose."
+    exit 1
+  fi
+}
+
+exige_compose_local DATABASE_URL "${DATABASE_URL:-}"
+exige_compose_local DATABASE_URL_TEST "${DATABASE_URL_TEST:-}"
+if [ -n "${DATABASE_URL_UNPOOLED:-}" ]; then
+  exige_compose_local DATABASE_URL_UNPOOLED "$DATABASE_URL_UNPOOLED"
+  unset DATABASE_URL_UNPOOLED
+fi
+
 pnpm db:up
 pnpm db:migrate
 pnpm db:seed
-
-# PIN sintético já usado em e2e/ e tests/helpers/db.ts. Só preenche @exemplo.test sem PIN.
-pnpm exec tsx --conditions=react-server --env-file=.env.local <<'EOF'
-import postgres from 'postgres';
-import { gerarHashPin } from './lib/pin.ts';
-
-async function main() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error('DATABASE_URL ausente');
-  const sql = postgres(url, { max: 1, onnotice: () => {} });
-  try {
-    const [row] = await sql<{ n: number }[]>`
-      SELECT count(*)::int AS n FROM users
-      WHERE email LIKE '%@exemplo.test' AND pin_hash IS NULL`;
-    if ((row?.n ?? 0) > 0) {
-      const hash = await gerarHashPin('482916');
-      await sql`
-        UPDATE users
-        SET pin_hash = ${hash}, must_reset_pin = false
-        WHERE email LIKE '%@exemplo.test' AND pin_hash IS NULL`;
-      console.log('PIN sintético definido para usuários @exemplo.test sem PIN.');
-    } else {
-      console.log('PIN sintético já presente (ou nenhum usuário sintético sem PIN).');
-    }
-  } finally {
-    await sql.end();
-  }
-}
-
-main().catch((erro) => {
-  console.error(erro instanceof Error ? erro.message : erro);
-  process.exit(1);
-});
-EOF
+pnpm exec tsx --conditions=react-server --env-file=.env.local .cursor/pin-sintetico.ts
 
 pronto() {
   curl -sf -o /dev/null --max-time 2 http://127.0.0.1:3000 >/dev/null 2>&1
@@ -102,4 +107,4 @@ for _ in $(seq 1 90); do
   sleep 2
 done
 pronto || { echo "Next.js não respondeu em :3000"; exit 1; }
-echo "LouFlow pronto em http://127.0.0.1:3000 (tmux session: dev)"
+echo "LouFlow pronto na porta 3000 (tmux session: dev)"
