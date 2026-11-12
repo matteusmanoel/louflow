@@ -13,8 +13,9 @@ export function lerCotaBytes(bruto: string | undefined): number {
     return Number.isSafeInteger(valor) ? valor : COTA_PADRAO;
   }
   const comUnidade = /^(\d+(?:\.\d+)?)\s*(kb|mb|gb|tb)$/i.exec(texto);
-  if (!comUnidade) return COTA_PADRAO;
-  const valor = Math.round(Number(comUnidade[1]) * FATOR_COTA[comUnidade[2].toLowerCase()]!);
+  const unidade = comUnidade?.[2];
+  if (!comUnidade || !unidade) return COTA_PADRAO;
+  const valor = Math.round(Number(comUnidade[1]) * FATOR_COTA[unidade.toLowerCase()]!);
   return Number.isSafeInteger(valor) && valor >= 0 ? valor : COTA_PADRAO;
 }
 
