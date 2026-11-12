@@ -1,19 +1,19 @@
 import postgres from 'postgres';
 import { aplicarSeed, USUARIOS_SINTETICOS } from '../../db/seed';
+import { validarDestinoSeed } from '../../db/seed-guard';
 import { gerarHashPin, gerarPinProvisorio } from '../../lib/pin';
 
 /**
  * Uso local: pnpm db:seed [--pin]
- * Só roda com DATABASE_URL em localhost. Usuários fora de @exemplo.test não são alterados.
+ * Só roda com DATABASE_URL em localhost, ou em host remoto com SEED_ALLOW_REMOTE=1 e o host exato em
+ * SEED_REMOTE_HOSTS (ex.: o branch develop do Neon). O banco de produção é sempre recusado (db/seed-guard.ts).
+ * Usuários fora de @exemplo.test não são alterados.
  * Com --pin, gera um PIN provisório por Usuário sintético e o imprime só neste terminal.
  */
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('Defina DATABASE_URL.');
-  const host = new URL(url).hostname;
-  if (host !== 'localhost' && host !== '127.0.0.1') {
-    throw new Error('Seed recusado: DATABASE_URL não aponta para localhost.');
-  }
+  validarDestinoSeed(url, { SEED_ALLOW_REMOTE: process.env.SEED_ALLOW_REMOTE, SEED_REMOTE_HOSTS: process.env.SEED_REMOTE_HOSTS });
   const sql = postgres(url, { max: 1, onnotice: () => {} });
   try {
     const [reais] = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM users WHERE email NOT LIKE '%@exemplo.test'`;
