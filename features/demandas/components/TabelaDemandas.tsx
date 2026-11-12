@@ -4,7 +4,7 @@ import { useRef, useState, useTransition, type SyntheticEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Demanda, DemandaPrioridade, DemandaStatus } from '../consultas';
-import { destinosStatus, TRANSICOES } from '@/features/status/transicoes';
+import { destinosStatus, responsavelPodeIniciar, TRANSICOES } from '@/features/status/transicoes';
 import { alterarStatusDemanda } from '@/features/status/actions';
 import { registrarEntrega } from '@/features/aprovacoes/actions';
 import { alterarPrioridadeDemanda } from '../actions';
@@ -44,6 +44,8 @@ type Props = {
   podeMover: boolean;
   podeEntregar: boolean;
   podePrioridade: boolean;
+  /** Id da Sessão quando é Editor: na Demanda dele, pode iniciar e entregar (o servidor confere). */
+  editorId?: string | null;
   aoAtualizar: () => void;
 };
 
@@ -56,6 +58,7 @@ export function TabelaDemandas({
   podeMover,
   podeEntregar,
   podePrioridade,
+  editorId = null,
   aoAtualizar,
 }: Props) {
   const router = useRouter();
@@ -91,11 +94,13 @@ export function TabelaDemandas({
       mostrarFeedback({ ok: false, mensagem: 'Concluída só acontece pela aprovação da entrega.' });
       return;
     }
+    const dono = editorId !== null && demanda.editor_id === editorId;
     if (destino === 'Aprovação') {
-      if (demanda.status !== 'Em execução' || !podeEntregar) {
+      const entregaPermitida = podeEntregar || dono;
+      if (demanda.status !== 'Em execução' || !entregaPermitida) {
         mostrarFeedback({
           ok: false,
-          mensagem: podeEntregar
+          mensagem: entregaPermitida
             ? `Não é possível ir de ${demanda.status} para Aprovação.`
             : 'Você não tem permissão para registrar a entrega.',
         });
@@ -107,7 +112,7 @@ export function TabelaDemandas({
       setEntrega(demanda);
       return;
     }
-    if (!podeMover) {
+    if (!podeMover && !(dono && responsavelPodeIniciar(demanda.status, destino))) {
       mostrarFeedback({ ok: false, mensagem: 'Você não tem permissão para alterar o status.' });
       return;
     }
@@ -169,7 +174,12 @@ export function TabelaDemandas({
           </thead>
           <tbody>
             {demandas.map((demanda) => {
-              const destinos = destinosStatus(demanda.status, { podeMover, podeEntregar });
+              const dono = editorId !== null && demanda.editor_id === editorId;
+              const destinos = destinosStatus(demanda.status, {
+                podeMover,
+                podeEntregar: podeEntregar || dono,
+                podeIniciar: dono,
+              });
               const editor = demanda.editor_label ?? demanda.editor_nome;
               return (
                 <tr

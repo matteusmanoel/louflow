@@ -183,10 +183,11 @@ describe('registrarEntrega', () => {
     expect(res.mensagem).toMatch(/Em execução/);
   });
 
-  it('falha sem permissão editarDemandas', async () => {
-    const { id: editorId } = await criarUsuario({ perfil: 'Editor' });
-    const demandaId = await criarDemanda('Em execução', editorId);
-    const semPerm = sessao(editorId); // sem editarDemandas
+  it('falha sem permissão editarDemandas quando a Demanda é de outro Editor', async () => {
+    const { id: donoId } = await criarUsuario({ perfil: 'Editor' });
+    const { id: outroId } = await criarUsuario({ perfil: 'Editor' });
+    const demandaId = await criarDemanda('Em execução', donoId);
+    const semPerm = sessao(outroId); // sem editarDemandas e sem ser o Editor da Demanda
 
     const res = await executarAcao(
       defRegistrarEntrega,

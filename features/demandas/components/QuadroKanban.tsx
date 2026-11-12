@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Demanda, DemandaStatus } from '../consultas';
-import { COLUNAS_QUADRO, TRANSICOES, destinosStatus } from '@/features/status/transicoes';
+import { COLUNAS_QUADRO, TRANSICOES, destinosStatus, responsavelPodeIniciar } from '@/features/status/transicoes';
 import { alterarStatusDemanda } from '@/features/status/actions';
 import { registrarEntrega } from '@/features/aprovacoes/actions';
 import { BadgePrioridade } from './BadgePrioridade';
@@ -36,10 +36,12 @@ type Props = {
   demandas: Demanda[];
   podeMover: boolean;
   podeEntregar: boolean;
+  /** Id da Sessão quando é Editor: na Demanda dele, pode iniciar e entregar (o servidor confere). */
+  editorId?: string | null;
   aoAtualizar: () => void;
 };
 
-export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }: Props) {
+export function QuadroKanban({ demandas, podeMover, podeEntregar, editorId = null, aoAtualizar }: Props) {
   const router = useRouter();
   const [pendente, startTransition] = useTransition();
   const [entrega, setEntrega] = useState<Demanda | null>(null);
@@ -67,17 +69,23 @@ export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }:
     });
   }
 
+  function ehDono(demanda: Demanda) {
+    return editorId !== null && demanda.editor_id === editorId;
+  }
+
   function soltar(demanda: Demanda, destino: DemandaStatus) {
     if (destino === demanda.status) return;
     if (destino === 'Concluída') {
       mostrarFeedback({ ok: false, mensagem: 'Concluída só acontece pela aprovação da entrega.' });
       return;
     }
+    const dono = ehDono(demanda);
     if (destino === 'Aprovação') {
-      if (demanda.status !== 'Em execução' || !podeEntregar) {
+      const entregaPermitida = podeEntregar || dono;
+      if (demanda.status !== 'Em execução' || !entregaPermitida) {
         mostrarFeedback({
           ok: false,
-          mensagem: podeEntregar
+          mensagem: entregaPermitida
             ? `Não é possível ir de ${demanda.status} para Aprovação.`
             : 'Você não tem permissão para registrar a entrega.',
         });
@@ -89,7 +97,7 @@ export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }:
       setEntrega(demanda);
       return;
     }
-    if (!podeMover) {
+    if (!podeMover && !(dono && responsavelPodeIniciar(demanda.status, destino))) {
       mostrarFeedback({ ok: false, mensagem: 'Você não tem permissão para alterar o status.' });
       return;
     }
@@ -109,7 +117,11 @@ export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }:
   }
 
   function destinos(demanda: Demanda): DemandaStatus[] {
-    return destinosStatus(demanda.status, { podeMover, podeEntregar });
+    return destinosStatus(demanda.status, {
+      podeMover,
+      podeEntregar: podeEntregar || ehDono(demanda),
+      podeIniciar: ehDono(demanda),
+    });
   }
 
   function acionarDestino(demanda: Demanda, destino: DemandaStatus) {
@@ -144,7 +156,7 @@ export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }:
               aria-label={coluna}
               className="flex w-64 shrink-0 flex-col gap-2 rounded-[var(--raio-card)] bg-[var(--loumar-50)] p-2"
               onDragOver={(evento) => {
-                if (podeMover || podeEntregar) evento.preventDefault();
+                if (podeMover || podeEntregar || editorId !== null) evento.preventDefault();
               }}
               onDrop={(evento) => {
                 evento.preventDefault();
@@ -161,14 +173,14 @@ export function QuadroKanban({ demandas, podeMover, podeEntregar, aoAtualizar }:
                 {cards.map((demanda) => (
                   <article
                     key={demanda.id}
-                    draggable={podeMover || podeEntregar}
+                    draggable={podeMover || podeEntregar || ehDono(demanda)}
                     onDragStart={(evento) => {
                       evento.dataTransfer.setData('text/plain', demanda.id);
                       evento.dataTransfer.effectAllowed = 'move';
                     }}
                     className={cn(
                       'flex flex-col gap-2 rounded-[var(--raio-card)] border border-[var(--borda-app)] bg-[var(--superficie)] p-3 shadow-[var(--sombra-card)]',
-                      (podeMover || podeEntregar) && 'cursor-grab',
+                      (podeMover || podeEntregar || ehDono(demanda)) && 'cursor-grab',
                       demanda.atrasada && 'border-[var(--alerta-atrasada)]',
                     )}
                   >

@@ -26,6 +26,7 @@ export default async function PaginaDashboard() {
           usuarioId: usuario.id,
           administrador: usuario.perfil === 'Administrador',
           podeAlterarStatus: usuario.permissoes.alterarStatus,
+          ehEditor: usuario.perfil === 'Editor',
           podeAssumir: usuario.perfil === 'Editor' || usuario.perfil === 'Administrador',
         }}
       />

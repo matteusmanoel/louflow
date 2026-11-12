@@ -38,6 +38,8 @@ type Props = {
   podeMover: boolean;
   podeEntregar: boolean;
   podePrioridade: boolean;
+  /** Id da Sessão quando é Editor; habilita iniciar e entregar nas próprias Demandas. */
+  editorId?: string | null;
 };
 
 export function QuadroDemandas({
@@ -50,6 +52,7 @@ export function QuadroDemandas({
   podeMover,
   podeEntregar,
   podePrioridade,
+  editorId = null,
 }: Props) {
   const [demandas, setDemandas] = useState<Demanda[]>(demandasIniciais);
   const [filtros, setFiltros] = useState<FiltrosListarDemandas>({});
@@ -345,6 +348,7 @@ export function QuadroDemandas({
             demandas={demandas}
             podeMover={podeMover}
             podeEntregar={podeEntregar}
+            editorId={editorId}
             aoAtualizar={() => void recarregar(filtros)}
           />
         )
@@ -374,6 +378,7 @@ export function QuadroDemandas({
             podeMover={podeMover}
             podeEntregar={podeEntregar}
             podePrioridade={podePrioridade}
+            editorId={editorId}
             aoAtualizar={() => void recarregar(filtros)}
           />
         )}

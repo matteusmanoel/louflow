@@ -25,6 +25,8 @@ export type AcoesPainel = {
   usuarioId: string;
   administrador: boolean;
   podeAlterarStatus: boolean;
+  /** Editor sem alterarStatus ainda pode iniciar a própria Demanda (o servidor confere). */
+  ehEditor?: boolean;
   podeAssumir: boolean;
 };
 
@@ -85,7 +87,7 @@ function AcoesRapidas({ item, acoes }: { item: PrioridadePainel; acoes: AcoesPai
   const pode = acoes.podeAlterarStatus && (acoes.administrador || responsavel);
   const cortes = item.formato === 'Cortes';
   const comecar =
-    pode &&
+    (pode || (Boolean(acoes.ehEditor) && responsavel)) &&
     (item.status === 'Não iniciada' || item.status === 'Ajustes solicitados') &&
     TRANSICOES[item.status].includes('Em execução');
   const pausar = pode && item.status === 'Em execução' && TRANSICOES[item.status].includes('Pausada');

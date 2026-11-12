@@ -1,5 +1,5 @@
 import 'server-only';
-import type { DefinicaoAcao } from '@/lib/action';
+import { MENSAGEM_SEM_PERMISSAO, type DefinicaoAcao } from '@/lib/action';
 import { novoId } from '@/lib/crypto';
 import type { Tx } from '@/lib/db';
 import { ErroDominio } from '@/lib/errors';
@@ -19,11 +19,19 @@ export const defRegistrarEntrega: DefinicaoAcao<
 > = {
   nome: 'registrarEntrega',
   schema: schemaRegistrarEntrega,
-  permissao: 'editarDemandas',
+  // editarDemandas registra em qualquer Demanda. O Editor sem a chave só registra nas suas
+  // (editor_id = Sessão); a conferência é feita abaixo, no servidor, com a linha travada.
+  permissao: (u) => u.permissoes.editarDemandas || u.perfil === 'Editor',
   executar: async ({ tx, usuario, entrada }) => {
     const [demanda] = await tx<{ status: string; editor_id: string | null }[]>`
-      SELECT status, editor_id FROM demands WHERE id = ${entrada.demandaId} LIMIT 1`;
+      SELECT status, editor_id FROM demands
+       WHERE id = ${entrada.demandaId} AND deleted_at IS NULL
+       FOR UPDATE`;
 
+    if (!usuario.permissoes.editarDemandas && (!demanda || demanda.editor_id !== usuario.id)) {
+      // Mesma resposta para Demanda inexistente e de outro Editor: não revela a existência.
+      throw new ErroDominio(MENSAGEM_SEM_PERMISSAO);
+    }
     if (!demanda) throw new ErroDominio('Demanda não encontrada.');
     if (demanda.status !== 'Em execução') {
       throw new ErroDominio(
