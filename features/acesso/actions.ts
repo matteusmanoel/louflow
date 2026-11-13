@@ -7,6 +7,7 @@ import { criarAcao } from '@/lib/action';
 import { registrarAuditoria } from '@/lib/audit';
 import { COOKIE_DISPOSITIVO, COOKIE_SESSAO, gravarCookieDispositivo, gravarCookieSessao, limparCookies } from '@/lib/auth';
 import { db, emTransacao } from '@/lib/db';
+import { caminhoTrocaPin, destinoFinal } from '@/lib/destino';
 import { ErroDominio } from '@/lib/errors';
 import { FORMATO_PIN } from '@/lib/pin';
 import { autenticar, criarDispositivoConfiavel, criarSessao, encerrarSessao, esquecerDispositivo, trocarPinProprio } from '@/lib/session';
@@ -23,10 +24,6 @@ const schemaLogin = z.object({
   lembrar: z.boolean(),
   para: z.string().optional(),
 });
-
-function destinoSeguro(valor: string | undefined): string {
-  return valor && valor.startsWith('/') && !valor.startsWith('//') ? valor : '/';
-}
 
 export async function entrar(_anterior: EstadoFormulario, form: FormData): Promise<EstadoFormulario> {
   try {
@@ -53,7 +50,7 @@ export async function entrar(_anterior: EstadoFormulario, form: FormData): Promi
     if (lembrar && !resultado.deveTrocarPin) {
       await gravarCookieDispositivo(await criarDispositivoConfiavel(db(), resultado.userId));
     }
-    redirect(resultado.deveTrocarPin ? '/trocar-pin' : destinoSeguro(para));
+    redirect(resultado.deveTrocarPin ? caminhoTrocaPin(para) : destinoFinal(para));
   } catch (erro) {
     unstable_rethrow(erro);
     return { mensagem: 'Não foi possível entrar agora. Tente novamente.' };
@@ -83,7 +80,7 @@ export async function trocarPin(_anterior: EstadoFormulario, form: FormData): Pr
   const resultado = await acaoTrocarPin({ pin: form.get('pin'), confirmacao: form.get('confirmacao') });
   if (!resultado.ok) return { mensagem: resultado.mensagem };
   await gravarCookieSessao(resultado.dados.token);
-  redirect('/');
+  redirect(destinoFinal(form.get('para')));
 }
 
 export async function sair(): Promise<void> {

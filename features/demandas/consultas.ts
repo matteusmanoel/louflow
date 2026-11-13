@@ -59,6 +59,14 @@ export type ResumoEditor = {
   atrasadas: number;
 };
 
+/** Formato que não entra na Fila de Fichas (o Editor padrão é atribuído na criação). */
+export const FORMATO_FORA_DA_FILA = 'Cortes';
+
+/** Regra da Fila de Fichas: sem Editor e fora do formato Cortes (usada na consulta e no acesso). */
+export function demandaNaFila(demanda: { editor_id: string | null; format: string }): boolean {
+  return demanda.editor_id === null && demanda.format !== FORMATO_FORA_DA_FILA;
+}
+
 const STATUSES_NAO_ATRASADOS = [
   'Concluída',
   'Cancelada',
@@ -289,7 +297,7 @@ export async function listarFilaDeFichas(sql: Db): Promise<Demanda[]> {
     LEFT JOIN users u_inf ON u_inf.id = d.influencer_id
     WHERE d.editor_id IS NULL
       AND d.deleted_at IS NULL
-      AND d.format <> 'Cortes'
+      AND d.format <> ${FORMATO_FORA_DA_FILA}
     ORDER BY d.created_at ASC
   `;
   return linhas;

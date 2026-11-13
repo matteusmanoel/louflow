@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { COOKIE_DISPOSITIVO, COOKIE_SESSAO } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { destinoInterno } from '@/lib/destino';
 import { env } from '@/lib/env';
 import { criarSessao, usuarioDoDispositivo } from '@/lib/session';
 
@@ -9,13 +10,9 @@ import { criarSessao, usuarioDoDispositivo } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
-function destinoSeguro(valor: string | null): string {
-  return valor && valor.startsWith('/') && !valor.startsWith('//') ? valor : '/';
-}
-
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const para = destinoSeguro(url.searchParams.get('para'));
+  const para = destinoInterno(url.searchParams.get('para'));
   const jar = await cookies();
   const token = jar.get(COOKIE_DISPOSITIVO)?.value;
   const userId = token ? await usuarioDoDispositivo(db(), token) : null;

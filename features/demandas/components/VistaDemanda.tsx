@@ -6,6 +6,7 @@ import { exigirModulo } from '@/lib/auth';
 import { listarArquivosDemanda } from '@/features/arquivos/consultas';
 import { ListaLinksArquivo } from '@/features/arquivos/components/ListaLinksArquivo';
 import { formatarData } from '@/lib/datas';
+import { exigirAcessoDemanda } from '@/features/demandas/acesso';
 import { carregarDemandaExcluidaPagina, carregarDemandaPagina } from '@/features/demandas/consultas';
 import {
   FichaSecao,
@@ -60,6 +61,8 @@ export async function VistaDemanda({
     if (await carregarDemandaExcluidaPagina(id)) redirect('/demandas');
     notFound();
   }
+  // Antes de qualquer arquivo assinado, entrega, comentário, histórico ou ficha: só quem pode ver a Demanda.
+  await exigirAcessoDemanda(usuario, demanda);
 
   const abaAtiva = abaValida(aba);
   const podeEditar = usuario.permissoes.editarDemandas;

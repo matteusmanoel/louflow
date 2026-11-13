@@ -1,6 +1,7 @@
 import 'server-only';
 import type { DefinicaoAcao } from '@/lib/action';
 import { novoId } from '@/lib/crypto';
+import { garantirAcessoDemanda } from '@/features/demandas/acesso';
 import { ErroDominio } from '@/lib/errors';
 import { registrarHistorico } from '@/lib/history';
 import { schemaAdicionarComentario, schemaExcluirComentario } from './schema';
@@ -12,6 +13,7 @@ export const defAdicionarComentario: DefinicaoAcao<
   nome: 'adicionarComentario',
   schema: schemaAdicionarComentario,
   executar: async ({ tx, usuario, entrada }) => {
+    await garantirAcessoDemanda(tx, usuario, entrada.demandaId);
     const id = novoId();
     await tx`
       INSERT INTO comments (id, demand_id, author_id, body)

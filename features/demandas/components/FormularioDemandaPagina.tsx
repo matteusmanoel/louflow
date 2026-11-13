@@ -7,6 +7,7 @@ import {
   carregarFormatosPagina,
   carregarInfluencersPagina,
 } from '@/features/demandas/consultas';
+import { exigirAcessoDemanda } from '@/features/demandas/acesso';
 import { FormDemanda } from '@/features/demandas/components/FormDemanda';
 
 export async function FormularioDemandaPagina({
@@ -36,6 +37,7 @@ export async function FormularioDemandaPagina({
     if (await carregarDemandaExcluidaPagina(id)) redirect('/demandas');
     notFound();
   }
+  if (demanda) await exigirAcessoDemanda(usuario, demanda);
 
   return (
     <FormDemanda

@@ -29,12 +29,15 @@ const deps = (usuario: UsuarioSessao) => ({
   sql: sqlTeste,
 });
 
-/** Cria uma demanda mínima para usar nos testes. */
-async function criarDemanda(criadoPorId: string): Promise<string> {
+/**
+ * Cria uma demanda mínima para usar nos testes. Quem cria é o Editor responsável
+ * (só quem pode ver a Demanda comenta nela); `influencerId` é opcional.
+ */
+async function criarDemanda(criadoPorId: string, influencerId: string | null = null): Promise<string> {
   const id = 'LFTEST00' + Math.random().toString(36).slice(2, 6).toUpperCase();
   await sqlTeste()`
-    INSERT INTO demands (id, title, format, status, priority, created_by)
-    VALUES (${id}, 'Demanda Teste', 'Reels', 'Não iniciada', 'Normal', ${criadoPorId})
+    INSERT INTO demands (id, title, format, status, priority, created_by, editor_id, influencer_id)
+    VALUES (${id}, 'Demanda Teste', 'Reels', 'Não iniciada', 'Normal', ${criadoPorId}, ${criadoPorId}, ${influencerId})
   `;
   return id;
 }
@@ -43,7 +46,7 @@ async function criarDemanda(criadoPorId: string): Promise<string> {
 // 1. Adicionar comentário
 // ============================================================
 describe('adicionarComentario', () => {
-  it('qualquer usuário autenticado pode adicionar comentário', async () => {
+  it('o Editor responsável pode adicionar comentário', async () => {
     const u = await criarUsuario();
     const demandaId = await criarDemanda(u.id);
     const sessao = sessaoDe(u.id);
@@ -103,13 +106,67 @@ describe('adicionarComentario', () => {
   it('múltiplos comentários de usuários distintos', async () => {
     const u1 = await criarUsuario();
     const u2 = await criarUsuario();
-    const demandaId = await criarDemanda(u1.id);
+    const demandaId = await criarDemanda(u1.id, u2.id);
 
     await executarAcao(defAdicionarComentario, { demandaId, conteudo: 'Comentário 1' }, deps(sessaoDe(u1.id)));
     await executarAcao(defAdicionarComentario, { demandaId, conteudo: 'Comentário 2' }, deps(sessaoDe(u2.id)));
 
     const comentarios = await listarComentarios(sqlTeste(), demandaId);
     expect(comentarios).toHaveLength(2);
+  });
+});
+
+// ============================================================
+// 1b. Acesso à Demanda ao comentar (IDOR)
+// ============================================================
+describe('adicionarComentario: acesso à Demanda', () => {
+  async function cenario() {
+    const editor = await criarUsuario({ perfil: 'Editor' });
+    const outroEditor = await criarUsuario({ perfil: 'Editor' });
+    const influencer = await criarUsuario({ perfil: 'Influencer' });
+    const outroInfluencer = await criarUsuario({ perfil: 'Influencer' });
+    const admin = await criarUsuario({ perfil: 'Administrador' });
+    const delegado = await criarUsuario({ perfil: 'Influencer' });
+    await sqlTeste()`INSERT INTO approval_delegations (approver_id, editor_id) VALUES (${delegado.id}, ${editor.id})`;
+    const demandaId = await criarDemanda(editor.id, influencer.id);
+    return { editor, outroEditor, influencer, outroInfluencer, admin, delegado, demandaId };
+  }
+  const comentar = (demandaId: string, id: string, perfil: UsuarioSessao['perfil'] = 'Editor') =>
+    executarAcao(defAdicionarComentario, { demandaId, conteudo: 'Comentário de teste' }, deps({ ...sessaoDe(id), perfil, permissoes: resolverPermissoes(perfil, []) }));
+
+  it('permite: Editor responsável, Influencer solicitante, Administrador e Aprovador delegado', async () => {
+    const c = await cenario();
+    expect((await comentar(c.demandaId, c.editor.id)).ok).toBe(true);
+    expect((await comentar(c.demandaId, c.influencer.id, 'Influencer')).ok).toBe(true);
+    expect((await comentar(c.demandaId, c.admin.id, 'Administrador')).ok).toBe(true);
+    expect((await comentar(c.demandaId, c.delegado.id, 'Influencer')).ok).toBe(true);
+    expect(await listarComentarios(sqlTeste(), c.demandaId)).toHaveLength(4);
+  });
+
+  it('nega: Editor de outra equipe e Influencer de outra Demanda, sem gravar comentário nem histórico', async () => {
+    const c = await cenario();
+    for (const [id, perfil] of [[c.outroEditor.id, 'Editor'], [c.outroInfluencer.id, 'Influencer']] as const) {
+      const r = await comentar(c.demandaId, id, perfil);
+      expect(r).toMatchObject({ ok: false, mensagem: 'Você não tem permissão para esta Demanda.' });
+    }
+    expect(await listarComentarios(sqlTeste(), c.demandaId)).toHaveLength(0);
+    expect(await listarHistorico(sqlTeste(), c.demandaId)).toHaveLength(0);
+  });
+
+  it('permite quem tem verTodasDemandas e nega o Aprovador delegado de outro Editor', async () => {
+    const c = await cenario();
+    const gestor = await criarUsuario({ perfil: 'Editor' });
+    const sessaoGestor = { ...sessaoDe(gestor.id, { verTodasDemandas: true }) };
+    expect((await executarAcao(defAdicionarComentario, { demandaId: c.demandaId, conteudo: 'Gestor' }, deps(sessaoGestor))).ok).toBe(true);
+    await sqlTeste()`DELETE FROM approval_delegations WHERE approver_id = ${c.delegado.id}`;
+    await sqlTeste()`INSERT INTO approval_delegations (approver_id, editor_id) VALUES (${c.delegado.id}, ${c.outroEditor.id})`;
+    expect((await comentar(c.demandaId, c.delegado.id, 'Influencer')).ok).toBe(false);
+  });
+
+  it('Demanda inexistente devolve «Demanda não encontrada.»', async () => {
+    const c = await cenario();
+    const r = await comentar('LFNAOEXISTE', c.editor.id);
+    expect(r).toMatchObject({ ok: false, mensagem: 'Demanda não encontrada.' });
   });
 });
 
