@@ -7,8 +7,6 @@ import { listarArquivosEntregas } from '@/features/arquivos/consultas';
 import { listarContasAgendaveis } from '@/features/instagram/consultas';
 import { CabecalhoPagina } from '@/components/ui/cabecalho-pagina';
 import { ContainerPagina } from '@/components/ui/container-pagina';
-import { EstadoVazio } from '@/components/ui/estado-vazio';
-import { ClipboardCheck } from 'lucide-react';
 
 export default async function PaginaAprovacoes() {
   const usuario = await exigirModulo('aprovacoes');
@@ -55,11 +53,7 @@ export default async function PaginaAprovacoes() {
     <ContainerPagina>
       <CabecalhoPagina grupo="Produção" titulo="Aprovações" />
 
-      {itens.length === 0 ? (
-        <EstadoVazio icone={ClipboardCheck} titulo="Nenhuma entrega aguardando aprovação" />
-      ) : (
-        <ListaAprovacoes itens={itens} contas={contas} />
-      )}
+      <ListaAprovacoes itens={itens} contas={contas} />
     </ContainerPagina>
   );
 }

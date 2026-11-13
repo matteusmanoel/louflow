@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ExternalLink, File, Loader2 } from 'lucide-react';
+import { ClipboardCheck, ExternalLink, File, Loader2 } from 'lucide-react';
 import { aprovarEntrega, reprovarEntrega } from '../actions';
 import { classeMidia, ModalAgendarEntrega, type AssetEntrega } from './ModalAgendarEntrega';
 import type { LinkEntrega } from '../link-entrega';
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { EstadoVazio } from '@/components/ui/estado-vazio';
 import { mostrarFeedback } from '@/lib/toast';
 
 export type AprovacaoVisivel = {
@@ -71,6 +72,9 @@ export function ListaAprovacoes({
 
   return (
     <>
+      {itens.length === 0 ? (
+        <EstadoVazio icone={ClipboardCheck} titulo="Nenhuma entrega aguardando aprovação" />
+      ) : (
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {itens.map((item) => (
           <li key={item.entregaId}>
@@ -139,6 +143,7 @@ export function ListaAprovacoes({
           </li>
         ))}
       </ul>
+      )}
 
       <Dialog open={preview != null} onOpenChange={(visivel) => { if (!visivel) setPreview(null); }}>
         <DialogContent className="max-w-4xl">
