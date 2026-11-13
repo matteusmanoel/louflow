@@ -1,0 +1,12 @@
+{
+  "name": "louflow",
+  "user": "ubuntu",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "install": "pnpm install --frozen-lockfile",
+  "start": "bash .cursor/start.sh",
+  "ports": [
+    { "name": "web", "port": 3000 }
+  ]
+}
