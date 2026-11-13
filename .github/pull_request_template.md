@@ -48,6 +48,7 @@ Arquivos fora da pasta própria da fatia (justificar cada um):
 ## Checklist por área
 Invariantes e papéis: `docs/pr-review-guide.md` §2–§4.
 **Arquitetura/infra:** [ ] só a pasta da fatia · [ ] contratos de `lib/` respeitados · [ ] dependência nova justificada · [ ] gate §5 verde (CI GitHub Actions pendente)
+**Segurança:** [ ] Sessão/Permissão em toda ação · [ ] `/api/tv` com DTO · [ ] cron 401 sem `CRON_SECRET` · [ ] nenhum segredo ou dado pessoal · [ ] sem `Co-authored-by`
 
 ## Revisores a acionar
 - [ ] UI e acessibilidade

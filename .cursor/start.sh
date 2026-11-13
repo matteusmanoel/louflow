@@ -61,6 +61,9 @@ unset DATABASE_URL_UNPOOLED DATABASE_URL_MIGRATE_DEVELOP DATABASE_URL_MIGRATE_MA
 url_host_port() {
   python3 -c 'from urllib.parse import urlparse; import sys
 u = urlparse(sys.argv[1])
+# postgres.js / libpq: ?host= e ?port= sobrescrevem o authority. Boot do compose não usa query.
+if u.query or u.params:
+    raise SystemExit("query")
 print((u.hostname or "") + " " + str(u.port or ""))' "$1"
 }
 
@@ -70,8 +73,12 @@ exige_compose_local() {
     echo "Boot recusado: $nome ausente."
     exit 1
   fi
-  local host port
-  read -r host port <<<"$(url_host_port "$url")"
+  local parsed host port
+  if ! parsed="$(url_host_port "$url")"; then
+    echo "Boot recusado: $nome não pode ter query (host/porta do compose só no authority)."
+    exit 1
+  fi
+  read -r host port <<<"$parsed"
   case "$host" in
     127.0.0.1|localhost) ;;
     *)

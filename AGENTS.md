@@ -103,6 +103,7 @@ Use para conferir regras de negócio. Nunca copie dados, nunca faça commit dess
 
 Detalhes do boot, secrets e egress: [`docs/ENV-SETUP.md`](docs/ENV-SETUP.md). Ambiente: `.cursor/environment.json`.
 
+- **Nunca** peça nem use segredos reais; **nunca** conecte a Neon, Vercel, WhatsApp ou S3; **não** toque em `main` nem em `azure-pipelines.yml`.
 - Login sintético: `admin@exemplo.test` / `482916` (o mesmo de `e2e/contas.ts`). Nenhum segredo real; sem WhatsApp/S3/Neon/Vercel.
 - Gate manual (§5) antes do PR. Ainda **não** há GitHub Actions nem pipeline ADO neste repositório. E2E (S1-17): `pnpm exec playwright install --with-deps chromium` e `E2E_BASE_URL` na porta 3000 se o `next dev` do boot já estiver no ar.
 - PR no GitHub contra `develop`. Sem merge, sem `Co-authored-by`. Revisão: [`docs/pr-review-guide.md`](docs/pr-review-guide.md) (§4). Zona protegida (§2 / guia §1.1), inclusive `.cursor/**` e `.github/**`, nunca é aprovada por bot: marcar a TI.

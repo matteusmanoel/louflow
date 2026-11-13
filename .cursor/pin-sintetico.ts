@@ -6,13 +6,11 @@ import { gerarHashPin } from '../lib/pin.ts';
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('DATABASE_URL ausente');
-  validarDestinoSeed(url, {
-    SEED_ALLOW_REMOTE: process.env.SEED_ALLOW_REMOTE,
-    SEED_REMOTE_HOSTS: process.env.SEED_REMOTE_HOSTS,
-  });
+  // Sem opt-in remoto: este script só grava PIN sintético no compose local.
+  validarDestinoSeed(url);
   const destino = new URL(url);
-  if (destino.port !== '54329') {
-    throw new Error('Boot recusado: DATABASE_URL não usa a porta 54329 do compose.');
+  if (destino.port !== '54329' || destino.searchParams.size > 0) {
+    throw new Error('Boot recusado: DATABASE_URL não é o compose local (porta 54329, sem query).');
   }
   const sql = postgres(url, { max: 1, onnotice: () => {} });
   try {
