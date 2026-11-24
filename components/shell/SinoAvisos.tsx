@@ -1,13 +1,78 @@
 'use client';
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { Bell, BellOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { carregarAvisos } from '@/features/dashboard/actions';
 import type { AvisoPainel } from '@/features/dashboard/avisos';
 
 const CHAVE = 'louflow-avisos';
+const CHAVE_SOM = 'louflow-avisos-som';
 const INTERVALO_MS = 30_000;
+
+function somMudo(): boolean {
+  try {
+    return window.localStorage.getItem(CHAVE_SOM) === 'mudo';
+  } catch {
+    return false;
+  }
+}
+
+const ouvintesSom = new Set<() => void>();
+
+function guardarSom(mudo: boolean) {
+  try {
+    window.localStorage.setItem(CHAVE_SOM, mudo ? 'mudo' : 'ligado');
+  } catch {
+    // Sem armazenamento local o silêncio vale só nesta aba.
+  }
+  for (const ouvinte of ouvintesSom) ouvinte();
+}
+
+function assinarSom(ouvinte: () => void) {
+  ouvintesSom.add(ouvinte);
+  return () => ouvintesSom.delete(ouvinte);
+}
+
+let audioCtx: AudioContext | null = null;
+
+function contextoAudio(): AudioContext | null {
+  const Ctx = window.AudioContext;
+  if (!Ctx) return null;
+  if (!audioCtx) audioCtx = new Ctx();
+  return audioCtx;
+}
+
+function emitirAviso(ctx: AudioContext) {
+  const agora = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const ganho = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(880, agora);
+  osc.frequency.exponentialRampToValueAtTime(660, agora + 0.18);
+  ganho.gain.setValueAtTime(0.0001, agora);
+  ganho.gain.exponentialRampToValueAtTime(0.08, agora + 0.02);
+  ganho.gain.exponentialRampToValueAtTime(0.0001, agora + 0.2);
+  osc.connect(ganho);
+  ganho.connect(ctx.destination);
+  osc.start(agora);
+  osc.stop(agora + 0.21);
+}
+
+function tocarAviso() {
+  if (somMudo()) return;
+  const ctx = contextoAudio();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    void ctx.resume().then(() => emitirAviso(ctx)).catch(() => undefined);
+    return;
+  }
+  try {
+    emitirAviso(ctx);
+  } catch {
+    // O navegador pode recusar o áudio antes do primeiro gesto.
+  }
+}
 
 type Memoria = { vistos: number[]; ocultos: number[] };
 
@@ -40,19 +105,32 @@ export function SinoAvisos() {
   const [itens, setItens] = useState<AvisoPainel[]>([]);
   const [vistos, setVistos] = useState<number[]>([]);
   const [ocultos, setOcultos] = useState<number[]>([]);
+  const mudo = useSyncExternalStore(assinarSom, somMudo, () => false);
   const primeira = useRef(true);
 
   const aplicar = useCallback((lista: AvisoPainel[]) => {
     const memoria = lerMemoria() ?? { vistos: [], ocultos: [] };
     const visiveis = lista.filter((aviso) => !memoria.ocultos.includes(aviso.id));
-    if (primeira.current && !lerMemoria()) {
+    const primeiraCarga = primeira.current;
+    if (primeiraCarga && !lerMemoria()) {
       memoria.vistos = visiveis.map((aviso) => aviso.id);
       guardarMemoria(memoria);
     }
+    const novos = visiveis.filter((aviso) => !memoria.vistos.includes(aviso.id));
+    if (!primeiraCarga && novos.length > 0) tocarAviso();
     primeira.current = false;
     setOcultos(memoria.ocultos);
     setVistos(memoria.vistos);
     setItens(visiveis);
+  }, []);
+
+  useEffect(() => {
+    function destravar() {
+      const ctx = contextoAudio();
+      if (ctx) void ctx.resume().catch(() => undefined);
+    }
+    document.addEventListener('pointerdown', destravar, { once: true });
+    return () => document.removeEventListener('pointerdown', destravar);
   }, []);
 
   useEffect(() => {
@@ -136,9 +214,22 @@ export function SinoAvisos() {
         >
           <div className="mb-2 flex items-center justify-between gap-2">
             <strong className="text-sm text-[var(--texto-forte)]">Notificações</strong>
-            <Button type="button" variant="ghost" size="sm" onClick={limpar}>
-              Limpar
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-pressed={mudo}
+                aria-label={mudo ? 'Ativar som das notificações' : 'Silenciar notificações'}
+                onClick={() => guardarSom(!mudo)}
+              >
+                {mudo ? <BellOff className="h-3.5 w-3.5" aria-hidden /> : <Bell className="h-3.5 w-3.5" aria-hidden />}
+                {mudo ? 'Som' : 'Silenciar'}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={limpar}>
+                Limpar
+              </Button>
+            </div>
           </div>
           {itens.length === 0 ? (
             <p className="text-sm text-[var(--texto-suave)]">Nenhuma notificação nova.</p>
