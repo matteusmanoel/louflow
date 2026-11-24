@@ -32,6 +32,8 @@ function registrarSemEnvio(aviso: Notificacao): void {
 }
 
 export const enviarNotificacao: Enviador = async (sql, aviso) => {
+  if (aviso.tipo !== 'resumo_diario') return;
+
   const canal = lerCanal();
   if (canal.destinoEhGrupo && !canal.grupoLiberado) {
     throw new Error('O destino configurado é um grupo e o envio para grupo ainda não está liberado.');

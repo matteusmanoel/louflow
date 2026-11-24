@@ -13,7 +13,7 @@ export default async function PaginaAvisos() {
       <CabecalhoPagina
         grupo="Conta"
         titulo="Avisos"
-        descricao="O WhatsApp do setor recebe atribuição, ajuste, aprovação, prazo e pendência."
+        descricao="O grupo do WhatsApp recebe um resumo por dia, no horário definido aqui."
       />
       <FormularioAvisos cadencia={cadencia} />
     </ContainerPagina>

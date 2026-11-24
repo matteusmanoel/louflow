@@ -9,9 +9,9 @@ export type CadenciaAvisos = {
 };
 
 export const CADENCIA_PADRAO: CadenciaAvisos = {
-  horaPrazo: 8,
+  horaPrazo: 10,
   antecedenciaDias: 2,
-  horaPendencia: 8,
+  horaPendencia: 10,
   folgaHoras: 24,
 };
 
