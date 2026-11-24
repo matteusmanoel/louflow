@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -48,6 +48,21 @@ type Props = {
 
 /** Um gesto (Escape no painel de cima) não pode fechar o de baixo no mesmo instante. */
 let fechoEmAndamento = false;
+/** Exclusão em andamento: o fecho do Dialog não pode voltar ao detalhe já removido. */
+let fechoSuspenso = false;
+
+export function suspenderFechoPainel() {
+  fechoSuspenso = true;
+}
+
+export function liberarFechoPainel() {
+  fechoSuspenso = false;
+}
+
+function interacaoNoAlerta(evento: { target: EventTarget | null }) {
+  const alvo = evento.target;
+  return alvo instanceof Element && alvo.closest('[role="alertdialog"]') != null;
+}
 
 const CLASSE_MODAL = cn(
   'flex flex-col gap-0 overflow-hidden p-0',
@@ -76,8 +91,12 @@ export function PainelEntidade({
   const mostrarAbas = (abas?.length ?? 0) >= 2;
   const tituloId = 'painel-entidade-titulo';
 
+  useEffect(() => {
+    fechoSuspenso = false;
+  }, []);
+
   function executarFecho() {
-    if (fechoEmAndamento) return;
+    if (fechoSuspenso || fechoEmAndamento) return;
     fechoEmAndamento = true;
     queueMicrotask(() => {
       fechoEmAndamento = false;
@@ -198,6 +217,15 @@ export function PainelEntidade({
         <DialogContent
           className={CLASSE_MODAL}
           aria-labelledby={tituloId}
+          onPointerDownOutside={(evento) => {
+            if (interacaoNoAlerta(evento)) evento.preventDefault();
+          }}
+          onFocusOutside={(evento) => {
+            if (interacaoNoAlerta(evento)) evento.preventDefault();
+          }}
+          onInteractOutside={(evento) => {
+            if (interacaoNoAlerta(evento)) evento.preventDefault();
+          }}
         >
           {miolo}
         </DialogContent>

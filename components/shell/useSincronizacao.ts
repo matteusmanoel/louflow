@@ -1,15 +1,16 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * Polling de /api/sync (30 s por padrão). Quando a revisão muda, recarrega os Server Components.
- * Usado pelas telas de Demanda; módulos sem Demanda recarregam ao abrir a aba ou a cada 60 s.
+ * Devolve o instante da última verificação bem-sucedida.
  */
-export function useSincronizacao(intervaloMs = 30_000) {
+export function useSincronizacao(intervaloMs = 30_000): Date | null {
   const router = useRouter();
   const revisao = useRef<number | null>(null);
+  const [atualizadoEm, setAtualizadoEm] = useState<Date | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -22,6 +23,7 @@ export function useSincronizacao(intervaloMs = 30_000) {
         const { alterou, revisao: atual } = (await resposta.json()) as { alterou: boolean; revisao: number };
         if (revisao.current !== null && alterou) router.refresh();
         revisao.current = atual;
+        setAtualizadoEm(new Date());
       } catch {
         // Rede instável: tenta no próximo ciclo.
       }
@@ -33,4 +35,6 @@ export function useSincronizacao(intervaloMs = 30_000) {
       clearInterval(id);
     };
   }, [intervaloMs, router]);
+
+  return atualizadoEm;
 }

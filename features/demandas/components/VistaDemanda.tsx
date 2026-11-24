@@ -1,12 +1,13 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
 import { linkAcessivel } from '@/lib/armazenamento';
 import { exigirModulo } from '@/lib/auth';
 import { listarArquivosDemanda } from '@/features/arquivos/consultas';
 import { ListaLinksArquivo } from '@/features/arquivos/components/ListaLinksArquivo';
 import { formatarData } from '@/lib/datas';
-import { carregarDemandaPagina } from '@/features/demandas/consultas';
+import { exigirAcessoDemanda } from '@/features/demandas/acesso';
+import { carregarDemandaExcluidaPagina, carregarDemandaPagina } from '@/features/demandas/consultas';
 import {
   FichaSecao,
   StatusControle,
@@ -56,10 +57,16 @@ export async function VistaDemanda({
 }) {
   const usuario = await exigirModulo('demandas');
   const demanda = await carregarDemandaPagina(id);
-  if (!demanda) notFound();
+  if (!demanda) {
+    if (await carregarDemandaExcluidaPagina(id)) redirect('/demandas');
+    notFound();
+  }
+  // Antes de qualquer arquivo assinado, entrega, comentário, histórico ou ficha: só quem pode ver a Demanda.
+  await exigirAcessoDemanda(usuario, demanda);
 
   const abaAtiva = abaValida(aba);
-  const podeEditar = usuario.permissoes.editarDemandas;
+  const podeEditar =
+    usuario.permissoes.editarDemandas || (usuario.perfil === 'Influencer' && demanda.editor_id === null);
   const linkExterno = await linkAcessivel(demanda.link);
   const arquivosDemanda = await Promise.all(
     (await listarArquivosDemanda(demanda.id))

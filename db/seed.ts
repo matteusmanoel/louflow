@@ -114,6 +114,28 @@ async function aplicarConteudoDemonstracao(tx: postgres.TransactionSql): Promise
     LEFT JOIN users ed ON ed.email = v.ed_email
     ON CONFLICT (id) DO NOTHING`;
 
+  // Demanda em Em execução/Pausada tem sempre um Ciclo aberto (features/status/index.ts abre o Ciclo
+  // ao entrar em execução). Sem ele, o Ranking e o relógio de edição enxergam a Demanda como parada.
+  await tx`
+    INSERT INTO editing_cycles (id, demand_id, version, editor_id, started_at, status)
+    SELECT v.id, d.id, 1, d.editor_id, now() - v.inicio::interval, 'Em andamento'
+    FROM (VALUES
+      ('CYseed000002', 'LFseed000002', '2 days'),
+      ('CYseed000004', 'LFseed000004', '3 days'),
+      ('CYseed000010', 'LFseed000010', '4 hours')
+    ) AS v(id, demand_id, inicio)
+    JOIN demands d ON d.id = v.demand_id AND d.editor_id IS NOT NULL
+    WHERE NOT EXISTS (SELECT 1 FROM editing_cycles c WHERE c.demand_id = d.id)
+    ON CONFLICT (id) DO NOTHING`;
+
+  await tx`
+    INSERT INTO demand_pauses (id, demand_id, paused_at, user_id)
+    SELECT 'PAseed000004', d.id, now() - interval '1 day', d.editor_id
+    FROM demands d
+    WHERE d.id = 'LFseed000004' AND d.status = 'Pausada' AND d.editor_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM demand_pauses p WHERE p.demand_id = d.id AND p.resumed_at IS NULL)
+    ON CONFLICT (id) DO NOTHING`;
+
   await tx`
     INSERT INTO demand_trash (demand_id, deleted_by)
     SELECT 'LFseed000011', id FROM users WHERE email = 'admin@exemplo.test'

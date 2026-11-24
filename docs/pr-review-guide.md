@@ -23,6 +23,7 @@ Mudanças aqui só passam com aprovação explícita da TI. O revisor **não apr
 | `scripts/migracao/` | Importação de dados reais |
 | `azure-pipelines.yml`, `vercel.json`, `next.config.*`, `proxy.ts` | Deploy, cabeçalhos e roteamento de acesso |
 | `package.json`, lockfile | Dependências novas |
+| `.cursor/**`, `.github/**`, `docker-compose.yml`, `scripts/db/**` | Ambiente dos Cloud Agents, template/CI futuro, Postgres local e scripts de banco |
 
 ### 1.2 Requer revisão da TI
 
@@ -74,9 +75,9 @@ O revisor pode aprovar sozinho se todos os itens da §3 passarem.
 
 ### 2.4 Repositório
 
-18. Commit com `AB#<id>` do Work Item. **Sem `Co-authored-by`** de ferramentas ou agentes.
+18. PR no GitHub `matteusmanoel/louflow` contra `develop`. `AB#<id>` do Azure Boards é opcional quando houver Work Item. **Sem `Co-authored-by`** de ferramentas ou agentes.
 19. O PR não mistura zonas sem necessidade. UI e Server Action nova vão em PRs separados quando possível.
-20. Lint, typecheck e testes verdes na Pipeline. Preview gerado.
+20. Lint, typecheck e testes verdes no **gate manual** (`pnpm lint`, `pnpm typecheck`, `pnpm test:db`, `pnpm build`). CI em GitHub Actions ainda é pendente; o `azure-pipelines.yml` é legado e não roda neste repositório. Agentes de nuvem não fazem deploy.
 
 ## 3. Checklist do revisor
 

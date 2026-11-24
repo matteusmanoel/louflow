@@ -25,7 +25,7 @@ export default async function PaginaRanking({
       <CabecalhoPagina
         grupo="Acompanhamento"
         titulo="Ranking"
-        descricao={`Produção de ${formatarData(periodo.inicio)} a ${formatarData(periodo.fim)}. O tempo médio usa os ciclos concluídos no período.`}
+        descricao={`Produção de ${formatarData(periodo.inicio)} a ${formatarData(periodo.fim)}. O tempo médio usa os ciclos concluídos no período. Nota e posição seguem a fórmula do Painel de TV (volume, aprovação direta e agilidade); disputa posição quem tem 2 ou mais entregas no período.`}
         acao={
           <form className="flex flex-wrap items-end gap-2" method="get">
             <label className="grid gap-1 text-xs font-medium text-[var(--texto-suave)]">

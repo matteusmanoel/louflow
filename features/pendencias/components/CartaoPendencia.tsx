@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -77,7 +78,9 @@ export function CartaoPendencia({
               : 'text-[var(--texto-forte)]',
           )}
         >
-          {pendencia.titulo}
+          <Link href={`/demandas/${pendencia.id}`} className="text-inherit no-underline">
+            {pendencia.titulo}
+          </Link>
         </h2>
         <span className="text-[13px] text-[var(--chip-aprovacao-texto)] bg-[var(--chip-aprovacao-fundo)] border border-[var(--chip-aprovacao-borda)] px-2.5 py-0.5 rounded-full whitespace-nowrap">
           {pendencia.status}

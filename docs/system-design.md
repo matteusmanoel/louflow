@@ -13,9 +13,9 @@
 | Aplicação | Next.js App Router, Server Components e Server Actions, TypeScript | Decidido |
 | Hosting | Vercel, plano gratuito | Decidido |
 | Banco | Neon Postgres, plano gratuito | Decidido |
-| Deploy | ADO Pipeline com `vercel deploy --prebuilt`: PR → preview, merge em `main` → produção | Decidido |
-| Repo | `loumar-tech/louflow-marketing/_git/louflow` | Decidido |
-| E-mail | Resend, plano gratuito | Decidido (P5) |
+| Deploy | Preview Vercel por PR (projeto `louflow`, conta pessoal). CI (lint/typecheck/`test:db`/build) **pendente** no GitHub. Migrations no Neon: **manuais, antes do merge em `main`**. `azure-pipelines.yml` é legado. Agentes não disparam CD | Atualizado |
+| Repo | GitHub `matteusmanoel/louflow` (oficial). Ainda não há projeto nem repositório do LouFlow no Azure DevOps | Atualizado |
+| WhatsApp | uazapi, instância do setor. Sem credencial o aviso só é registrado | Decidido |
 | Agendador | cron-job.org chamando rotas protegidas por segredo | Decidido (P5) |
 | Tempo real | Polling HTTP com cache de borda, sem WebSocket | Decidido (P5) |
 
@@ -37,7 +37,7 @@ flowchart LR
   end
 
   Neon[("Neon Postgres")]
-  Resend["Resend"]
+  Uazapi["uazapi"]
   Drive["Drive e WeTransfer: links"]
 
   Browser --> Pages
@@ -51,7 +51,7 @@ flowchart LR
   TvApi --> Neon
   Sync --> Neon
   Domain --> Neon
-  Domain --> Resend
+  Domain --> Uazapi
   Browser -.-> Drive
 ```
 
@@ -143,7 +143,7 @@ Leituras viram Server Components ou queries. Mutações viram Server Actions. Fu
 | `cortes` | `salvarCorte`, `concluirCorte` | Actions |
 | `wiki` | `salvarRegraWiki`, `alterarPublicacaoRegraWiki`, `obterFotosCatalogoEquipamentos` | Actions; o catálogo vira um JSON estático |
 | `sorteios` | `cadastrarSorteio`, `consultarSorteios`, `registrarRetiradaSorteio` | Actions |
-| `preferencias` | `obterPreferenciasNotificacao`, `salvarPreferenciasNotificacao` | Server Component + Action |
+| `preferencias` | `lerCadencia`, `salvarCadencia`, `enviarEnsaio` | Painel do admin: cadência e ensaio |
 | `relatorios` | `obterRelatorioDiario` | Server Component |
 | `analista` | `obterStatusAnalistaLouFlow`, `perguntarAoAnalistaLouFlow` | Server Component + Action |
 | `usuarios` | `listarUsuariosPainel`, `salvarUsuarioPainel`, `redefinirPinUsuario`, `desligarUsuarioPainel`, `limparMembroAusentePainel` | Actions de administração |
@@ -208,32 +208,36 @@ Use o driver serverless da Neon com transação interativa (WebSocket ou pool). 
 | PIN | Digest com segredo nas Script Properties | Hash lento de senha, com sal, numa biblioteca padrão de mercado. Pepper numa variável de ambiente da Vercel. **Reset forçado de todos no lançamento** |
 | Escopo Prêmios | `validarSessao_(token, 'sorteios')` | Middleware: Perfil Prêmios só alcança `/sorteios` |
 
-Segredos ficam **somente** nas variáveis de ambiente da Vercel e da Pipeline: banco, pepper do PIN, `CRON_SECRET` e chave do Resend. Nunca vão para o repositório, para logs ou para documentos.
+Segredos ficam **somente** nas variáveis de ambiente da Vercel (e, quando o CD existir, da pipeline): banco, pepper do PIN, `CRON_SECRET`, token da uazapi e `META_TOKEN_KEY` (cifra o token de cada Business Manager). Nunca vão para o repositório, para logs ou para documentos.
 
 ## 8. Rotinas agendadas
 
-A produção tem **três** gatilhos de tempo, e não um:
+A produção tem **quatro** gatilhos de tempo, e não um:
 
 | Rotina | Hoje | Destino |
 |---|---|---|
 | Encerrar Captações e Reservas vencidas | A cada 5 min e também em cada leitura | `POST /api/cron/encerramentos` a cada 5 min. A leitura também aplica a regra, como hoje. `UPDATE … WHERE fim <= now() AND situacao = ...` é idempotente |
-| Pendências do Influencer: prazo padrão de 24 h, lembretes e aviso à administração | A cada 15 min | `POST /api/cron/pendencias` a cada 15 min |
-| Alerta de prazo por Editor | Diário às 08:00 | `POST /api/cron/alertas-prazo` diário às 08:00 America/Sao_Paulo |
+| Resumo diário do grupo (atrasadas e em aprovação) | A cada 15 min; o handler só envia na hora configurada | `POST /api/cron/pendencias` a cada 15 min. Padrão 10:00 America/Sao_Paulo. Uma mensagem por dia |
+| Mesmo resumo, pela rota antiga de prazo | Diário | `POST /api/cron/alertas-prazo` chama o mesmo resumo. A trava impede uma segunda mensagem |
+| Publicar agendamentos de Instagram | — | `POST /api/cron/instagram` a cada 1 min. Idempotente: reusa o container e não republica quem já tem `ig_media_id` |
 
 Contrato de toda rota de cron:
 
 - Exige `Authorization: Bearer $CRON_SECRET`. Sem esse cabeçalho, responde 401.
-- É idempotente: rodar duas vezes não duplica e-mails, porque as colunas `*_sent_at` funcionam como trava.
+- É idempotente: rodar duas vezes não duplica avisos. O resumo diário usa `notification_dispatches` (`resumo_diario` + o dia) como trava.
 - Termina dentro do limite de execução da função.
 - Registra falhas em `error_log`.
 
 O Vercel Cron do plano Hobby roda só uma vez por dia. Por isso um agendador externo atende os três jobs com um só mecanismo.
 
-## 9. E-mail
+## 9. WhatsApp
 
-- O e-mail só sai **depois do commit**. Uma falha de envio não desfaz a operação e é registrada em `error_log`.
-- Antes de enviar, o servidor consulta as preferências do destinatário (`notification_preferences`).
-- Limite do plano gratuito do Resend: 100 e-mails por dia e 3 000 por mês. Volume estimado: 16 usuários com alertas diários e mudanças de Status, o que fica abaixo do limite. Há um risco: lotes administrativos grandes. Mitigação: o lote envia um resumo, e não um e-mail por Demanda.
+- O aviso só sai **depois do commit**. Uma falha de envio não desfaz a operação e é registrada em `error_log`.
+- O destino é um só: a conversa de teste ou, com `UAZAPI_GRUPO_LIBERADO=true`, o grupo do setor. Não há opt-out individual.
+- Menção (`@` e o campo `mentions`) só vai para grupo, e só de quem tem telefone no cadastro. Nos outros casos a mensagem usa o nome.
+- O grupo recebe só o resumo diário, na hora definida pelo admin (padrão 10:00). Atrasadas mencionam o Editor. Demandas em Aprovação mencionam o Influencer.
+- Ajuste, aprovação e editor atribuído não saem no grupo. Ficam na demanda e no sino.
+- Status e comentário não geram aviso no grupo.
 
 ## 10. Painel de TV
 
@@ -246,20 +250,12 @@ O Vercel Cron do plano Hobby roda só uma vez por dia. Por isso um agendador ext
 
 | Ambiente | Gatilho | Banco |
 |---|---|---|
-| Preview | PR aberto ou atualizado | Branch Neon `preview`, com dados sintéticos e sem dados pessoais |
-| Produção | Merge em `main` | Branch Neon principal |
+| Preview | Vercel for GitHub gera preview por PR (projeto `louflow`). Sem CI nem migrate automático | Branch Neon `preview` (sintético). Conferir que o Preview da Vercel **não** aponta para produção |
+| Produção | Deploy da Vercel no push em `main` (Production Branch **a confirmar**). **Migrations no Neon (develop/preview/main) são manuais, pela TI, antes do merge em `main`**: `DATABASE_URL_UNPOOLED=<neon> pnpm db:migrate`. Agentes não têm credencial Neon | Branch Neon principal |
 
-Etapas da Pipeline, em ordem:
+Migrations são **aditivas** e devem ser aplicadas **antes** do deploy, para a versão anterior continuar funcionando durante a troca. O `azure-pipelines.yml` (legado) não está ligado a este repositório. Até existir `.github/workflows/ci.yml` (PR separado, zona protegida, TI), o gate de qualidade é o §5 do `AGENTS.md`.
 
-1. Instalar dependências.
-2. Rodar lint, typecheck e testes.
-3. `vercel build`.
-4. Só em `main`: aplicar as migrations pendentes.
-5. `vercel deploy --prebuilt`, com `--prod` em `main`.
-
-Uma falha em qualquer etapa interrompe o deploy. Migrations rodam **antes** do deploy e são aditivas, para que a versão anterior continue funcionando durante a troca.
-
-Estratégia de branches no ADO: o padrão Loumar é `develop`, `staging`, `main`. Este documento assume só `main` + PRs, conforme D5b. **Pendente de confirmação com o TL** se `develop` deve existir.
+Estratégia de branches no GitHub: `develop` (padrão de PRs) e `main` (produção). O padrão Loumar em outros repositórios inclui `staging`; o LouFlow não usa `staging` neste repositório.
 
 ## 12. Migração dos dados (execução única)
 
@@ -271,6 +267,7 @@ Estratégia de branches no ADO: o padrão Loumar é `develop`, `staging`, `main`
 6. Não migrar: as 71 abas `Backup_*` e os PINs. Os Sorteios antigos dependem de P3.
 7. **Ensaio obrigatório** num branch Neon descartável. Comparar a contagem de linhas por aba com a de tabelas antes da virada.
 8. Virada: congelar a planilha (somente leitura), importar, liberar o reset de PIN e trocar o link.
+9. No dia seguinte, às 7h30 (America/Sao_Paulo), `scripts/virada/avisar-acesso.ts` manda **uma mensagem privada** por WhatsApp, na instância uazapi, para o `users.whatsapp` de cada usuário ativo importado que ainda não tem PIN. O texto leva o link (`APP_URL`), o e-mail e um PIN provisório de 6 dígitos. O primeiro acesso troca o PIN. A mensagem não vai para o grupo, não inclui `@exemplo.test` e o PIN não entra em log. Sem `VIRADA_CONFIRMADA=sim` e sem `--enviar`, o script só conta.
 
 ## 13. Observabilidade
 

@@ -30,6 +30,7 @@ export const CHAVES_PERMISSAO = [
   'operarDrone',
   'editorPadraoCortes',
   'notaInformativaRanking',
+  'conectarInstagram',
 ] as const;
 export type ChavePermissao = (typeof CHAVES_PERMISSAO)[number];
 export type Permissoes = Record<ChavePermissao, boolean>;

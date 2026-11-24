@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { CHAVES_PERMISSAO, PERFIS } from '@/lib/permissions';
+import { campoWhatsapp } from './telefone';
 
 export const schemaCriarUsuario = z.object({
   nome: z.string().min(2, 'Nome deve ter ao menos 2 caracteres.').max(100, 'Nome muito longo.'),
   email: z.string().email('E-mail inválido.').toLowerCase(),
   perfil: z.enum(PERFIS),
   editorLabel: z.string().max(50, 'Rótulo de editor muito longo.').nullish(),
+  whatsapp: campoWhatsapp,
 });
 
 export const schemaEditarUsuario = z.object({
@@ -14,6 +16,7 @@ export const schemaEditarUsuario = z.object({
   email: z.string().email('E-mail inválido.').toLowerCase(),
   perfil: z.enum(PERFIS),
   editorLabel: z.string().max(50, 'Rótulo de editor muito longo.').nullish(),
+  whatsapp: campoWhatsapp,
 });
 
 export const schemaAlterarAtivacao = z.object({

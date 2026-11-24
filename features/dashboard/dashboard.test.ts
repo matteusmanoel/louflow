@@ -4,6 +4,7 @@ import { resolverPermissoes } from '@/lib/permissions';
 import type { UsuarioSessao } from '@/lib/session';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
 import { carregarDashboard } from './consultas';
+import { listarAvisosRecentes } from './avisos';
 
 usarBancoLimpo();
 
@@ -26,6 +27,7 @@ function novoId(prefixo: string): string {
 async function inserirDemanda(campos: {
   title: string;
   status?: string;
+  format?: string;
   editorId?: string | null;
   influencerId?: string | null;
   postOffsetDias?: number | null;
@@ -41,7 +43,7 @@ async function inserirDemanda(campos: {
     ) VALUES (
       ${id},
       ${campos.title},
-      'Reels',
+      ${campos.format ?? 'Reels'},
       ${status},
       ${campos.editorId ?? null},
       ${campos.influencerId ?? null},
@@ -326,5 +328,224 @@ describe('dashboard por perfil', () => {
     expect(ciclo!.decorridoMs).toBeGreaterThan(89.5 * 60_000);
     expect(ciclo!.decorridoMs).toBeLessThan(90.5 * 60_000);
     expect(Math.abs(ciclo!.atualizadoEmMs - Date.now())).toBeLessThan(5_000);
+  });
+});
+
+describe('painel operacional', () => {
+  it('indicadores do administrador seguem a fila, a produção e a aprovação', async () => {
+    const admin = await criarUsuario({ perfil: 'Administrador' });
+    const editor = await criarUsuario({ perfil: 'Editor' });
+    await inserirDemanda({ title: 'Sem editor', status: 'Não iniciada' });
+    await inserirDemanda({ title: 'Em execução', status: 'Em execução', editorId: editor.id, postOffsetDias: 4 });
+    await inserirDemanda({ title: 'Atrasada', status: 'Em execução', editorId: editor.id, postOffsetDias: -1 });
+    await inserirDemanda({ title: 'Na aprovação', status: 'Aprovação', editorId: editor.id });
+    await inserirDemanda({ title: 'Pronta', status: 'Concluída', editorId: editor.id, postOffsetDias: -3 });
+
+    const visao = await carregarDashboard(sessao(admin.id, 'Administrador'));
+    if (visao.perfil !== 'Administrador') throw new Error('perfil inesperado');
+
+    expect(visao.titulo).toBe('Visão geral da operação');
+    expect(visao.indicadores).toEqual([
+      { chave: 'aguardandoEditor', rotulo: 'Aguardando editor', valor: 1 },
+      { chave: 'emProducao', rotulo: 'Em produção', valor: 4 },
+      { chave: 'atrasadas', rotulo: 'Atrasadas', valor: 1 },
+      { chave: 'aguardandoAprovacao', rotulo: 'Aguardando aprovação', valor: 1 },
+    ]);
+  });
+
+  it('classifica prazos de hoje, amanhã, dois dias e atraso', async () => {
+    const admin = await criarUsuario({ perfil: 'Administrador' });
+    await inserirDemanda({ title: 'Vence hoje', status: 'Em execução', postOffsetDias: 0 });
+    await inserirDemanda({ title: 'Vence amanhã', status: 'Não iniciada', postOffsetDias: 1 });
+    await inserirDemanda({ title: 'Vence em dois dias', status: 'Em execução', postOffsetDias: 2 });
+    await inserirDemanda({ title: 'Fora da faixa', status: 'Em execução', postOffsetDias: 3 });
+    await inserirDemanda({ title: 'Atrasada dois dias', status: 'Em execução', postOffsetDias: -2 });
+    await inserirDemanda({ title: 'Aprovação com prazo', status: 'Aprovação', postOffsetDias: -1 });
+    await inserirDemanda({ title: 'Já concluída', status: 'Concluída', postOffsetDias: 0 });
+
+    const visao = await carregarDashboard(sessao(admin.id, 'Administrador'));
+    if (visao.perfil !== 'Administrador') throw new Error('perfil inesperado');
+
+    const porTitulo = new Map(visao.alertasPrazo.map((alerta) => [alerta.titulo, alerta]));
+    expect(porTitulo.get('Vence hoje')).toMatchObject({ nivel: 'hoje', textoPrazo: 'VENCE HOJE', diasParaPrazo: 0 });
+    expect(porTitulo.get('Vence amanhã')).toMatchObject({ nivel: 'amanha', textoPrazo: 'VENCE AMANHÃ', diasParaPrazo: 1 });
+    expect(porTitulo.get('Vence em dois dias')).toMatchObject({
+      nivel: 'dois-dias',
+      textoPrazo: 'VENCE EM 2 DIAS',
+      diasParaPrazo: 2,
+    });
+    expect(porTitulo.get('Atrasada dois dias')).toMatchObject({
+      nivel: 'atrasada',
+      textoPrazo: 'ATRASADA HÁ 2 DIAS',
+      diasParaPrazo: -2,
+    });
+    expect(porTitulo.has('Fora da faixa')).toBe(false);
+    expect(porTitulo.has('Aprovação com prazo')).toBe(false);
+    expect(porTitulo.has('Já concluída')).toBe(false);
+  });
+
+  it('fila compartilhada fica com o editor e some para o influencer', async () => {
+    const editor = await criarUsuario({ perfil: 'Editor' });
+    const influencer = await criarUsuario({ perfil: 'Influencer' });
+    const sugerido = await criarUsuario({ perfil: 'Editor', nome: 'Editor Sugerido' });
+    const livre = await inserirDemanda({ title: 'Demanda livre', status: 'Não iniciada', postOffsetDias: 1 });
+    await inserirDemanda({ title: 'Corte sem editor', status: 'Não iniciada', format: 'Cortes' });
+    await sqlTeste()`
+      INSERT INTO technical_sheets (demand_id, sent_by, suggested_editor_id)
+      VALUES (${livre}, ${editor.id}, ${sugerido.id})
+    `;
+    await inserirDemanda({
+      title: 'Conteúdo do influencer',
+      status: 'Em execução',
+      influencerId: influencer.id,
+    });
+
+    const doEditor = await carregarDashboard(sessao(editor.id, 'Editor'));
+    if (doEditor.perfil !== 'Editor') throw new Error('perfil inesperado');
+    expect(doEditor.fila.map((item) => item.titulo)).toEqual(['Demanda livre', 'Conteúdo do influencer']);
+    expect(doEditor.fila.map((item) => item.titulo)).not.toContain('Corte sem editor');
+    expect(doEditor.fila[0]?.editorSugerido).toBe('Editor Sugerido');
+    expect(doEditor.demandas.map((item) => item.titulo)).not.toContain('Demanda livre');
+
+    const doInfluencer = await carregarDashboard(sessao(influencer.id, 'Influencer'));
+    if (doInfluencer.perfil !== 'Influencer') throw new Error('perfil inesperado');
+    expect(doInfluencer.demandas.map((item) => item.titulo)).toEqual(['Conteúdo do influencer']);
+    expect(doInfluencer.prioridades.map((item) => item.titulo)).not.toContain('Demanda livre');
+    expect(doInfluencer.alertasPrazo.map((item) => item.titulo)).not.toContain('Demanda livre');
+  });
+
+  it('saúde da operação só entra com ver relatórios e a carga marca staff', async () => {
+    const admin = await criarUsuario({ perfil: 'Administrador', nome: 'Admin Painel' });
+    const editor = await criarUsuario({ perfil: 'Editor', nome: 'Editor Carga' });
+    const staff = await criarUsuario({ perfil: 'Editor', nome: 'Pessoa Staff' });
+    await sqlTeste()`
+      INSERT INTO user_permissions (user_id, permission_key, granted)
+      VALUES (${staff.id}, 'notaInformativaRanking', true)
+    `;
+
+    const parada = await inserirDemanda({
+      title: 'Parada na fila',
+      status: 'Em execução',
+      editorId: editor.id,
+      postOffsetDias: 5,
+    });
+    await sqlTeste()`UPDATE demands SET created_at = now() - interval '4 days' WHERE id = ${parada}`;
+
+    const antiga = await inserirDemanda({
+      title: 'Aprovação antiga',
+      status: 'Aprovação',
+      editorId: editor.id,
+    });
+    await sqlTeste()`
+      INSERT INTO deliveries (id, demand_id, version, link, editor_id, status, delivered_at)
+      VALUES (
+        ${novoId('en')}, ${antiga}, 1, 'https://exemplo.test/entrega', ${editor.id},
+        'Aguardando aprovação', now() - interval '30 hours'
+      )
+    `;
+
+    const comAjustes = await inserirDemanda({
+      title: 'Ajustes repetidos',
+      status: 'Ajustes solicitados',
+      editorId: editor.id,
+    });
+    await sqlTeste()`
+      INSERT INTO deliveries (id, demand_id, version, link, editor_id, status, reason)
+      VALUES
+        (${novoId('en')}, ${comAjustes}, 1, 'https://exemplo.test/v1', ${editor.id}, 'Ajustes solicitados', 'Refazer abertura'),
+        (${novoId('en')}, ${comAjustes}, 2, 'https://exemplo.test/v2', ${editor.id}, 'Ajustes solicitados', 'Encurtar o final')
+    `;
+
+    await inserirDemanda({ title: 'Atraso um', status: 'Em execução', editorId: editor.id, postOffsetDias: -1 });
+    await inserirDemanda({ title: 'Atraso dois', status: 'Em execução', editorId: editor.id, postOffsetDias: -2 });
+    const doStaff = await inserirDemanda({
+      title: 'Demanda staff',
+      status: 'Em execução',
+      editorId: staff.id,
+      postOffsetDias: 2,
+    });
+    await sqlTeste()`
+      INSERT INTO editing_cycles (
+        id, demand_id, version, editor_id, started_at, ended_at, active_ms, status
+      ) VALUES (
+        ${novoId('cy')}, ${doStaff}, 1, ${staff.id},
+        now() - interval '3 hours', now() - interval '1 hour', ${2 * 3_600_000}, 'Concluído'
+      )
+    `;
+
+    const visao = await carregarDashboard(sessao(admin.id, 'Administrador'));
+    if (visao.perfil !== 'Administrador') throw new Error('perfil inesperado');
+    expect(visao.saude).toMatchObject({
+      paradas: 1,
+      aprovacoes24h: 1,
+      ajustesRecorrentes: 1,
+    });
+    expect(visao.saude?.editoresSobrecarregados).toBeGreaterThanOrEqual(1);
+    expect(visao.saude?.alertas.map((alerta) => alerta.titulo)).toEqual(
+      expect.arrayContaining(['Parada na fila', 'Aprovação antiga']),
+    );
+    expect(visao.saude?.formatos).toEqual([{ formato: 'Reels', horas: 2 }]);
+    expect(visao.concluidas14).toHaveLength(14);
+
+    const pessoa = visao.carga.find((item) => item.nome === 'Pessoa Staff');
+    const comum = visao.carga.find((item) => item.nome === 'Editor Carga');
+    expect(pessoa?.staff).toBe(true);
+    expect(comum?.staff).toBe(false);
+    expect(comum?.atrasadas).toBeGreaterThanOrEqual(2);
+    expect(visao).not.toHaveProperty('ranking');
+
+    const semRelatorio = sessao(admin.id, 'Administrador');
+    semRelatorio.permissoes = { ...semRelatorio.permissoes, verRelatorios: false };
+    const oculto = await carregarDashboard(semRelatorio);
+    if (oculto.perfil !== 'Administrador') throw new Error('perfil inesperado');
+    expect(oculto.saude).toBeNull();
+    expect(oculto.concluidas14).toEqual([]);
+    expect(oculto.carga.length).toBeGreaterThan(0);
+  });
+
+  it('título do aprovador delegado muda e a fila de cortes continua de fora', async () => {
+    const delegado = await criarUsuario({ perfil: 'Editor', nome: 'Editor Delegado' });
+    const editor = await criarUsuario({ perfil: 'Editor', nome: 'Editor da Demanda' });
+    await sqlTeste()`
+      INSERT INTO approval_delegations (approver_id, editor_id)
+      VALUES (${delegado.id}, ${editor.id})
+    `;
+    await inserirDemanda({ title: 'Na aprovação delegada', status: 'Aprovação', editorId: editor.id });
+
+    const sessaoDelegada = sessao(delegado.id, 'Editor');
+    sessaoDelegada.ehAprovadorDelegado = true;
+    const visao = await carregarDashboard(sessaoDelegada);
+    if (visao.perfil !== 'Editor') throw new Error('perfil inesperado');
+    expect(visao.titulo).toBe('Sua fila e aprovações autorizadas');
+    expect(visao.prioridades.map((item) => item.titulo)).toContain('Na aprovação delegada');
+  });
+
+  it('o histórico vira aviso só para quem enxerga a demanda', async () => {
+    const admin = await criarUsuario({ perfil: 'Administrador' });
+    const editor = await criarUsuario({ perfil: 'Editor', nome: 'Editor do Aviso' });
+    const outro = await criarUsuario({ perfil: 'Editor', nome: 'Editor de Fora' });
+    const demanda = await inserirDemanda({
+      title: 'Demanda avisada',
+      status: 'Aprovação',
+      editorId: editor.id,
+    });
+    await sqlTeste()`
+      INSERT INTO history (demand_id, action, user_id)
+      VALUES (${demanda}, 'status:Aprovação', ${editor.id})
+    `;
+
+    const doAdmin = await listarAvisosRecentes(sqlTeste(), sessao(admin.id, 'Administrador'));
+    expect(doAdmin[0]).toMatchObject({
+      titulo: 'Demanda avisada',
+      texto: 'O andamento da demanda foi atualizado',
+      status: 'Aprovação',
+      editor: 'Editor do Aviso',
+    });
+
+    const doEditor = await listarAvisosRecentes(sqlTeste(), sessao(editor.id, 'Editor'));
+    expect(doEditor.map((aviso) => aviso.titulo)).toContain('Demanda avisada');
+
+    const deFora = await listarAvisosRecentes(sqlTeste(), sessao(outro.id, 'Editor'));
+    expect(deFora.map((aviso) => aviso.titulo)).not.toContain('Demanda avisada');
   });
 });

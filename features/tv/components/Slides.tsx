@@ -12,6 +12,7 @@ import type {
   PayloadTv,
   RankingTv,
 } from '@/lib/tv';
+import { situacaoPrazo, type SituacaoPrazo } from '@/features/status/atraso';
 
 export const SLIDE_MS = 12_000;
 const SLIDE_MS_LISTA = 1_600;
@@ -70,25 +71,34 @@ function textoPrazo(dias: number | null) {
   return `${dias} dias`;
 }
 
-function legendaPrazo(dias: number | null) {
-  if (dias === null) return 'a definir';
-  if (dias < 0) return 'em atraso';
-  if (dias <= 1) return 'prazo';
-  return 'restantes';
+function legendaPrazo(situacao: SituacaoPrazo) {
+  switch (situacao) {
+    case 'sem-prazo': return 'a definir';
+    case 'atrasada': return 'em atraso';
+    case 'vencido-em-aprovacao': return 'vencido, em aprovação';
+    case 'proximo': return 'prazo';
+    default: return 'restantes';
+  }
 }
 
-function classePrazo(dias: number | null) {
-  if (dias === null) return 'neutra';
-  if (dias < 0) return 'critica';
-  if (dias <= 1) return 'atencao';
-  return 'ok';
+function classePrazo(situacao: SituacaoPrazo) {
+  switch (situacao) {
+    case 'sem-prazo': return 'neutra';
+    case 'atrasada': return 'critica';
+    case 'vencido-em-aprovacao':
+    case 'proximo': return 'atencao';
+    default: return 'ok';
+  }
 }
 
-function corPrazo(dias: number | null) {
-  if (dias === null) return 'cor-suave';
-  if (dias < 0) return 'cor-coral';
-  if (dias <= 1) return 'cor-ambar';
-  return 'cor-ink';
+function corPrazo(situacao: SituacaoPrazo) {
+  switch (situacao) {
+    case 'sem-prazo': return 'cor-suave';
+    case 'atrasada': return 'cor-coral';
+    case 'vencido-em-aprovacao':
+    case 'proximo': return 'cor-ambar';
+    default: return 'cor-ink';
+  }
 }
 
 function Titulo({ children }: { children: ReactNode }) {
@@ -185,7 +195,7 @@ function slidePendentes(itens: DemandaTv[]): SlideTv | null {
         <Titulo>Demandas <b>pendentes</b></Titulo>
         <Lista>
           {itens.map((item) => (
-            <Linha key={item.id} classe={classePrazo(item.diasParaPrazo)}>
+            <Linha key={item.id} classe={classePrazo(situacaoPrazo(item.status, item.diasParaPrazo))}>
               <BadgePrioridade prioridade={item.prioridade} />
               <Principal
                 titulo={item.titulo}
@@ -193,8 +203,8 @@ function slidePendentes(itens: DemandaTv[]): SlideTv | null {
               />
               <Lado
                 valor={textoPrazo(item.diasParaPrazo)}
-                legenda={legendaPrazo(item.diasParaPrazo)}
-                cor={corPrazo(item.diasParaPrazo)}
+                legenda={legendaPrazo(situacaoPrazo(item.status, item.diasParaPrazo))}
+                cor={corPrazo(situacaoPrazo(item.status, item.diasParaPrazo))}
               />
             </Linha>
           ))}
@@ -242,6 +252,8 @@ function slideAlertas(dados: PayloadTv): SlideTv {
 }
 
 function LinhaAlerta({ item }: { item: AlertaItemTv }) {
+  // O alerta já vem filtrado pela regra de atraso (sem Aprovação); a bandeira do servidor decide.
+  const situacao: SituacaoPrazo = item.atrasada ? 'atrasada' : item.diasParaPrazo <= 1 ? 'proximo' : 'no-prazo';
   return (
     <Linha classe={item.atrasada ? 'critica' : 'atencao'}>
       <Principal
@@ -250,8 +262,8 @@ function LinhaAlerta({ item }: { item: AlertaItemTv }) {
       />
       <Lado
         valor={textoPrazo(item.diasParaPrazo)}
-        legenda={item.atrasada ? 'em atraso' : legendaPrazo(item.diasParaPrazo)}
-        cor={corPrazo(item.diasParaPrazo)}
+        legenda={legendaPrazo(situacao)}
+        cor={corPrazo(situacao)}
       />
     </Linha>
   );

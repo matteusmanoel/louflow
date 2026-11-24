@@ -9,19 +9,16 @@ import {
   calcularProdutividade,
   calcularRanking,
   selecionarCarga,
-  type CaptacaoRanking,
   type DemandaProdutividade,
-  type DemandaRanking,
 } from './nota';
+import {
+  captacoesConcluidasNoPeriodo,
+  demandasConcluidasNoPeriodo,
+  entradasDoRanking,
+} from '@/features/metricas/nota-ranking';
+import { periodoPadrao } from '@/features/metricas/periodo';
 
 export type DadosBrutosTv = Parameters<typeof paraDtoTv>[0];
-
-type EditorFlags = { editor: string; profile: string; ativo: boolean; staff: boolean };
-
-function participa(linha: EditorFlags): { staff: boolean; disputa: boolean } {
-  const staff = Boolean(linha.staff);
-  return { staff, disputa: !staff && linha.profile === 'Editor' && Boolean(linha.ativo) };
-}
 
 function numero(valor: unknown) {
   const n = typeof valor === 'number' ? valor : Number(valor ?? 0);
@@ -30,6 +27,7 @@ function numero(valor: unknown) {
 
 /** S1-09 (#11564): consultas do Painel de TV. Só as colunas que o DTO copia. */
 export async function carregarDadosTv(sql: Db): Promise<DadosBrutosTv> {
+  const periodoDoMes = periodoPadrao();
   const [
     resumoRows,
     demandasPendentes,
@@ -291,65 +289,8 @@ export async function carregarDadosTv(sql: Db): Promise<DadosBrutosTv> {
       LIMIT ${LINHAS_POR_SLIDE}
     `,
 
-    sql<{
-      editor: string; profile: string; ativo: boolean; staff: boolean;
-      formato: string; prazo: Date | null; pausaMs: number | string;
-      ultimaEntregaEm: Date | null; ajustes: number | string; tempoAtivoMs: number | string;
-    }[]>`
-      SELECT
-        COALESCE(NULLIF(ue.editor_label, ''), ue.name) AS editor,
-        ue.profile,
-        ue.is_active AS ativo,
-        EXISTS (
-          SELECT 1 FROM user_permissions up
-          WHERE up.user_id = ue.id
-            AND up.permission_key = 'notaInformativaRanking'
-            AND up.granted
-        ) AS staff,
-        d.format AS formato,
-        COALESCE(d.post_date, d.approval_date) AS prazo,
-        COALESCE((
-          SELECT SUM(EXTRACT(EPOCH FROM (p.resumed_at - p.paused_at)) * 1000)
-          FROM demand_pauses p
-          WHERE p.demand_id = d.id AND p.resumed_at IS NOT NULL
-        ), 0) AS "pausaMs",
-        (
-          SELECT MAX(del.delivered_at) FROM deliveries del WHERE del.demand_id = d.id
-        ) AS "ultimaEntregaEm",
-        (
-          SELECT COUNT(*) FROM deliveries del
-          WHERE del.demand_id = d.id AND del.status = 'Ajustes solicitados'
-        ) AS ajustes,
-        COALESCE((
-          SELECT SUM(c.active_ms) FROM editing_cycles c
-          WHERE c.demand_id = d.id AND c.status = 'Concluído' AND c.active_ms IS NOT NULL
-        ), 0) AS "tempoAtivoMs"
-      FROM demands d
-      JOIN users ue ON ue.id = d.editor_id
-      WHERE d.deleted_at IS NULL
-        AND d.status = 'Concluída'
-        AND to_char(d.completed_at AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM')
-          = to_char(timezone('America/Sao_Paulo', now()), 'YYYY-MM')
-    `,
-
-    sql<{ editor: string; profile: string; ativo: boolean; staff: boolean }[]>`
-      SELECT
-        COALESCE(NULLIF(u.editor_label, ''), u.name) AS editor,
-        u.profile,
-        u.is_active AS ativo,
-        EXISTS (
-          SELECT 1 FROM user_permissions up
-          WHERE up.user_id = u.id
-            AND up.permission_key = 'notaInformativaRanking'
-            AND up.granted
-        ) AS staff
-      FROM captures c
-      JOIN users u ON u.id = c.videomaker_id
-      WHERE c.status = 'Concluída'
-        AND c.completed_at IS NOT NULL
-        AND to_char(c.completed_at AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM')
-          = to_char(timezone('America/Sao_Paulo', now()), 'YYYY-MM')
-    `,
+    demandasConcluidasNoPeriodo(sql, periodoDoMes),
+    captacoesConcluidasNoPeriodo(sql, periodoDoMes),
 
     sql<{ editor: string; abertas: number; atrasadas: number; cortesEmAndamento: number }[]>`
       SELECT
@@ -400,29 +341,13 @@ export async function carregarDadosTv(sql: Db): Promise<DadosBrutosTv> {
     .filter((item) => item.aprovar || item.agendar)
     .sort((a, b) => (b.aprovar + b.agendar) - (a.aprovar + a.agendar) || a.nome.localeCompare(b.nome, 'pt-BR'));
 
-  const demandasRanking: DemandaRanking[] = [];
-  const demandasProdutividade: DemandaProdutividade[] = [];
-  for (const linha of demandasMes) {
-    const flags = participa(linha);
-    demandasRanking.push({
-      editor: linha.editor,
-      formato: linha.formato,
-      ajustes: numero(linha.ajustes),
-      tempoAtivoMs: numero(linha.tempoAtivoMs),
-      ...flags,
-    });
-    demandasProdutividade.push({
-      formato: linha.formato,
-      prazo: linha.prazo,
-      pausaMs: numero(linha.pausaMs),
-      ultimaEntregaEm: linha.ultimaEntregaEm,
-      tempoAtivoMs: numero(linha.tempoAtivoMs),
-    });
-  }
-
-  const captacoesRanking: CaptacaoRanking[] = captacoesMes.map((linha) => ({
-    editor: linha.editor,
-    ...participa(linha),
+  const entradasRanking = entradasDoRanking(demandasMes, captacoesMes);
+  const demandasProdutividade: DemandaProdutividade[] = demandasMes.map((linha) => ({
+    formato: linha.formato,
+    prazo: linha.prazo,
+    pausaMs: numero(linha.pausaMs),
+    ultimaEntregaEm: linha.ultimaEntregaEm,
+    tempoAtivoMs: numero(linha.tempoAtivoMs),
   }));
 
   return {
@@ -449,7 +374,7 @@ export async function carregarDadosTv(sql: Db): Promise<DadosBrutosTv> {
     agenda,
     captacoes,
     cortes,
-    ranking: calcularRanking(demandasRanking, captacoesRanking),
+    ranking: calcularRanking(entradasRanking.demandas, entradasRanking.captacoes),
     produtividade: calcularProdutividade(demandasProdutividade, captacoesMes.length),
     cargaEditores: selecionarCarga(cargaRows),
   };

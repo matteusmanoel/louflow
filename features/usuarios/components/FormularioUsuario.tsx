@@ -50,6 +50,7 @@ export function FormularioUsuario({ acao, usuario, onPinGerado }: Props) {
         email: formData.get('email'),
         perfil: formData.get('perfil'),
         editorLabel: formData.get('editorLabel') || null,
+        whatsapp: formData.get('whatsapp') || null,
       };
       const resultado = await acao(entrada);
       if (resultado.ok && resultado.dados?.pin && onPinGerado) {
@@ -100,6 +101,22 @@ export function FormularioUsuario({ acao, usuario, onPinGerado }: Props) {
               defaultValue={usuario?.email}
               required
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="whatsapp">WhatsApp</Label>
+            <Input
+              id="whatsapp"
+              name="whatsapp"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="11999990000"
+              defaultValue={usuario?.whatsapp ?? ''}
+              maxLength={20}
+            />
+            <p className="text-sm text-[var(--texto-suave)]">
+              DDD e número. No grupo do setor, a menção usa este telefone.
+            </p>
           </div>
 
           <div className="space-y-1.5">

@@ -4,6 +4,8 @@ import { registrarErro } from './error-log';
 import { encerrarCaptacoesVencidas } from '@/features/captacoes/jobs';
 import { finalizarReservasVencidas } from '@/features/midia-movel/jobs';
 import { processarPendencias } from '@/features/pendencias/jobs';
+import { publicarPostagensInstagram } from '@/features/instagram/jobs';
+import { expurgarDrive } from '@/features/drive/jobs';
 import { enviarAlertasPrazo } from '@/features/notificacoes/jobs';
 
 /**
@@ -18,6 +20,8 @@ export const JOBS = {
   encerramentos: { encerrarCaptacoesVencidas, finalizarReservasVencidas },
   pendencias: { processarPendencias },
   'alertas-prazo': { enviarAlertasPrazo },
+  instagram: { publicarPostagensInstagram },
+  drive: { expurgarDrive },
 } satisfies Record<string, Record<string, HandlerJob>>;
 
 export type NomeJob = keyof typeof JOBS;

@@ -17,6 +17,8 @@ interface GraficoProps {
   vazio?: boolean;
   mensagemVazio?: string;
   className?: string;
+  /** Nome da categoria clicada. Barras e linhas usam o eixo. */
+  aoClicar?: (nome: string) => void;
 }
 
 function prefereMenosMovimento(): boolean {
@@ -38,10 +40,12 @@ export function Grafico({
   vazio,
   mensagemVazio = 'Sem dados para exibir.',
   className,
+  aoClicar,
 }: GraficoProps) {
   const conteinerRef = useRef<HTMLDivElement>(null);
   const instanciaRef = useRef<echarts.ECharts | null>(null);
   const opcoesRef = useRef(opcoes);
+  const aoClicarRef = useRef(aoClicar);
   const semDados = vazio ?? seriesVazias(opcoes);
 
   const aplicarOpcoes = (instancia: echarts.ECharts) => {
@@ -64,6 +68,10 @@ export function Grafico({
       const instancia = echarts.init(elemento, criarTemaLoumar(), { renderer: 'canvas' });
       instanciaRef.current = instancia;
       aplicarOpcoes(instancia);
+      instancia.on('click', (evento) => {
+        const nome = typeof evento.name === 'string' ? evento.name : '';
+        if (nome) aoClicarRef.current?.(nome);
+      });
     };
     iniciar();
 
@@ -82,6 +90,10 @@ export function Grafico({
     // aplicarOpcoes lê de refs; reiniciar só quando o gráfico aparece/some.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [semDados]);
+
+  useEffect(() => {
+    aoClicarRef.current = aoClicar;
+  }, [aoClicar]);
 
   useEffect(() => {
     opcoesRef.current = opcoes;

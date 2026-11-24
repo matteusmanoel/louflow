@@ -16,8 +16,10 @@ import {
 } from './schema';
 import type { Tx } from '@/lib/db';
 import { gravarArquivosDemanda } from '@/features/arquivos/gravar';
+import { textoEditorAtribuido } from '@/features/notificacoes/mensagens';
 
 const FORMATO_CORTES = 'Cortes';
+const MENSAGEM_DEMANDA_ASSUMIDA = 'Esta demanda já foi assumida e não pode mais ser editada.';
 
 export async function obterEditorPadraoCortes(tx: Tx): Promise<string | null> {
   const [linha] = await tx<{ user_id: string }[]>`
@@ -100,7 +102,7 @@ export const defCriarDemanda: DefinicaoAcao<typeof schemaCriarDemanda, { id: str
         tipo: 'editor_atribuido',
         destinatarios: [editorId],
         assunto: `Nova demanda atribuída: ${entrada.title}`,
-        texto: `A demanda "${entrada.title}" foi atribuída a você.`,
+        texto: textoEditorAtribuido(entrada.title, editorId),
         demandaId: id,
       });
     }
@@ -112,18 +114,30 @@ export const defCriarDemanda: DefinicaoAcao<typeof schemaCriarDemanda, { id: str
 export const defEditarDemanda: DefinicaoAcao<typeof schemaEditarDemanda, { id: string }> = {
   nome: 'editarDemanda',
   schema: schemaEditarDemanda,
-  permissao: 'editarDemandas',
+  permissao: (u) => u.permissoes.editarDemandas || u.perfil === 'Influencer',
   executar: async ({ tx, usuario, entrada }) => {
-    const [demanda] = await tx<{ id: string; format: string; editor_id: string | null }[]>`
-      SELECT id, format, editor_id FROM demands
+    const [demanda] = await tx<{
+      id: string;
+      format: string;
+      editor_id: string | null;
+      influencer_id: string | null;
+    }[]>`
+      SELECT id, format, editor_id, influencer_id FROM demands
       WHERE id = ${entrada.id} AND deleted_at IS NULL
       FOR UPDATE
     `;
     if (!demanda) throw new ErroDominio('Demanda não encontrada.');
 
-    let editorId: string | null = entrada.editor_id ?? null;
+    const livre = usuario.permissoes.editarDemandas;
+    if (!livre && demanda.editor_id !== null) {
+      throw new ErroDominio(MENSAGEM_DEMANDA_ASSUMIDA);
+    }
 
-    if (demanda.format === FORMATO_CORTES || entrada.format === FORMATO_CORTES) {
+    const formato = livre ? entrada.format : demanda.format;
+    const influencerId = livre ? (entrada.influencer_id ?? null) : demanda.influencer_id;
+    let editorId: string | null = livre ? (entrada.editor_id ?? null) : demanda.editor_id;
+
+    if (livre && (demanda.format === FORMATO_CORTES || entrada.format === FORMATO_CORTES)) {
       if (entrada.format === FORMATO_CORTES && demanda.format !== FORMATO_CORTES) {
         const editorCortes = await obterEditorPadraoCortes(tx);
         if (!editorCortes) throw new ErroDominio('Nenhum Editor padrão de Cortes configurado.');
@@ -134,9 +148,10 @@ export const defEditarDemanda: DefinicaoAcao<typeof schemaEditarDemanda, { id: s
     }
 
     if (
+      livre &&
       editorId &&
       editorId !== usuario.id &&
-      entrada.format !== FORMATO_CORTES &&
+      formato !== FORMATO_CORTES &&
       !usuario.permissoes.definirOutroEditor &&
       !usuario.permissoes.atribuirEditor
     ) {
@@ -146,8 +161,8 @@ export const defEditarDemanda: DefinicaoAcao<typeof schemaEditarDemanda, { id: s
     await tx`
       UPDATE demands SET
         title          = ${entrada.title},
-        format         = ${entrada.format},
-        influencer_id  = ${entrada.influencer_id ?? null},
+        format         = ${formato},
+        influencer_id  = ${influencerId},
         editor_id      = ${editorId},
         priority       = ${entrada.priority},
         approval_date  = ${entrada.approval_date ?? null},
@@ -171,7 +186,7 @@ export const defEditarDemanda: DefinicaoAcao<typeof schemaEditarDemanda, { id: s
       demandaId: entrada.id,
       acao: 'Demanda editada',
       usuarioId: usuario.id,
-      detalhes: `Título: ${entrada.title} | Formato: ${entrada.format}`,
+      detalhes: `Título: ${entrada.title} | Formato: ${formato}`,
     });
 
     return { dados: { id: entrada.id }, mensagem: 'Demanda atualizada com sucesso.' };

@@ -5,8 +5,7 @@ import { useRef, useState, useTransition } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
 import type { Demanda } from '../consultas';
 import { criarDemanda, editarDemanda, excluirDemanda } from '../actions';
-import { CampoArquivo } from '@/features/arquivos/components/CampoArquivo';
-import type { ItemArquivo } from '@/features/arquivos/schema';
+import { CampoArquivo, type CampoArquivoHandle } from '@/features/arquivos/components/CampoArquivo';
 import { novoIdPasta } from '@/lib/armazenamento-chave';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { mostrarFeedback } from '@/lib/toast';
 import { RodapeAcoes } from '@/components/ui/rodape-acoes';
-import { PainelEntidade, useFecharPainel } from '@/components/ui/painel-entidade';
+import { liberarFechoPainel, PainelEntidade, suspenderFechoPainel, useFecharPainel } from '@/components/ui/painel-entidade';
 
 type Opcao = { id: string; nome: string; label?: string };
 
@@ -38,6 +37,8 @@ type Props = {
   demanda?: Demanda;
   podeDefinirOutroEditor: boolean;
   podeExcluir: boolean;
+  /** Influencer edita o conteúdo, sem trocar formato, influencer ou editor. */
+  travarIdentidade?: boolean;
   variante?: 'pagina' | 'modal';
 };
 
@@ -58,6 +59,7 @@ export function FormDemanda({
   demanda,
   podeDefinirOutroEditor,
   podeExcluir,
+  travarIdentidade = false,
   variante = 'pagina',
 }: Props) {
   const router = useRouter();
@@ -66,7 +68,7 @@ export function FormDemanda({
   const [sujo, setSujo] = useState(false);
   const [formato, setFormato] = useState(demanda?.format ?? '');
   const [idPasta] = useState(() => demanda?.id ?? novoIdPasta('LF'));
-  const [arquivos, setArquivos] = useState<ItemArquivo[]>([]);
+  const campoArquivos = useRef<CampoArquivoHandle>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   function marcarSujo() {
@@ -85,26 +87,26 @@ export function FormDemanda({
     const entrada = {
       ...(editando ? { id: demanda!.id } : { id: idPasta }),
       title: dados.get('title') as string,
-      format: dados.get('format') as string,
-      influencer_id: sentinela(dados.get('influencer_id'), 'nenhum'),
-      editor_id: sentinela(dados.get('editor_id'), 'nenhum'),
+      format: travarIdentidade ? (demanda?.format ?? '') : (dados.get('format') as string),
+      influencer_id: travarIdentidade ? (demanda?.influencer_id ?? null) : sentinela(dados.get('influencer_id'), 'nenhum'),
+      editor_id: travarIdentidade ? (demanda?.editor_id ?? null) : sentinela(dados.get('editor_id'), 'nenhum'),
       priority: dados.get('priority') as 'Baixa' | 'Normal' | 'Alta' | 'Urgente',
       approval_date: (dados.get('approval_date') as string) || null,
       post_date: (dados.get('post_date') as string) || null,
       info: (dados.get('info') as string) || null,
       link: (dados.get('link') as string) || null,
-      arquivos,
       editorial_line: sentinela(dados.get('editorial_line'), 'nenhum') as 'Viral' | 'Comunidade' | 'Educacional' | null,
       source_program: (dados.get('source_program') as string) || null,
       clips_count: dados.get('clips_count') ? Number(dados.get('clips_count')) : null,
     };
 
     startTransition(async () => {
-      const resultado = editando
-        ? await editarDemanda(entrada)
-        : await criarDemanda(entrada);
+      const resultado = await campoArquivos.current!.enviar((arquivos) =>
+        editando ? editarDemanda({ ...entrada, arquivos }) : criarDemanda({ ...entrada, arquivos }),
+      );
 
       if (resultado.ok) {
+        campoArquivos.current?.limpar();
         mostrarFeedback(resultado);
         setSujo(false);
         // Edição modal: o detalhe já está no histórico. Push dessa URL
@@ -124,17 +126,21 @@ export function FormDemanda({
     });
   }
 
-  async function handleExcluir() {
+  function handleExcluir() {
     if (!demanda) return;
+    // A modal de edição fica sobre o detalhe. Confirmar a exclusão fecha o
+    // Dialog por fora e o fecho chama router.back(), que reabre a demanda
+    // já excluída (404). O refresh da rota atual tem o mesmo efeito.
+    if (variante === 'modal') suspenderFechoPainel();
     startTransition(async () => {
       const resultado = await excluirDemanda({ id: demanda.id });
       mostrarFeedback(resultado);
       if (resultado.ok) {
         router.replace('/demandas');
-        router.refresh();
-      } else {
-        setErro(resultado.mensagem);
+        return;
       }
+      if (variante === 'modal') liberarFechoPainel();
+      setErro(resultado.mensagem);
     });
   }
 
@@ -180,6 +186,7 @@ export function FormDemanda({
       </div>
 
       {/* Formato */}
+      {!travarIdentidade && (
       <div className="space-y-1.5">
         <Label htmlFor="format">Formato *</Label>
         <Select
@@ -201,8 +208,9 @@ export function FormDemanda({
           </SelectContent>
         </Select>
       </div>
+      )}
 
-      {ehCortes && (
+      {ehCortes && !travarIdentidade && (
         <Alert variant="warning">
           <AlertDescription>
             Demandas de Cortes recebem o Editor padrão automaticamente e não podem ser assumidas da Fila.
@@ -211,7 +219,7 @@ export function FormDemanda({
       )}
 
       {/* Influencer */}
-      {influencers.length > 0 && (
+      {!travarIdentidade && influencers.length > 0 && (
         <div className="space-y-1.5">
           <Label htmlFor="influencer_id">Influencer</Label>
           <Select name="influencer_id" defaultValue={demanda?.influencer_id || 'nenhum'} onValueChange={marcarSujo}>
@@ -229,7 +237,7 @@ export function FormDemanda({
       )}
 
       {/* Editor */}
-      {!ehCortes && podeDefinirOutroEditor && editores.length > 0 && (
+      {!travarIdentidade && !ehCortes && podeDefinirOutroEditor && editores.length > 0 && (
         <div className="space-y-1.5">
           <Label htmlFor="editor_id">
             Editor
@@ -287,12 +295,9 @@ export function FormDemanda({
         grupo="demandas"
         donoId={idPasta}
         valorInicial={demanda?.link ?? ''}
+        ref={campoArquivos}
         aoMudar={marcarSujo}
-        arquivos={arquivos}
-        aoMudarArquivos={(lista) => {
-          setArquivos(lista);
-          marcarSujo();
-        }}
+        aoMudarPendentes={marcarSujo}
         placeholder="https://drive.google.com/…"
       />
 

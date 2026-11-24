@@ -342,14 +342,22 @@
     padding-bottom: calc(var(--conteudo-padding) + 64px);
   }
 
-  /* O "Mais" da bottom bar abre o menu. O topo só fica para quem não tem a barra. */
+  /* O "Mais" da bottom bar abre o menu. No topo fica só o sino. */
   :global(.topo-shell--so-desktop) {
+    display: flex;
+    justify-content: flex-end;
+    height: 48px;
+  }
+
+  :global(.topo-shell--so-desktop) :global(.btn-hamburguer),
+  :global(.topo-shell--so-desktop) :global(.usuario-info) {
     display: none;
   }
 
   :global(.grade-shell:has(.topo-shell--so-desktop)) {
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: 48px minmax(0, 1fr) auto;
     grid-template-areas:
+      'topo'
       'conteudo'
       'bottom-bar';
   }

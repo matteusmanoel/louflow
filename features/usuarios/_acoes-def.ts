@@ -33,9 +33,9 @@ export const defCriarUsuario: DefinicaoAcao<
     if (existente) throw new ErroDominio('Já existe um Usuário com esse e-mail.');
 
     const [criado] = await tx<{ id: string }[]>`
-      INSERT INTO users (name, email, profile, editor_label, pin_hash, must_reset_pin, is_active)
+      INSERT INTO users (name, email, profile, editor_label, whatsapp, pin_hash, must_reset_pin, is_active)
       VALUES (${entrada.nome}, ${entrada.email}, ${entrada.perfil}, ${entrada.editorLabel ?? null},
-              NULL, true, true)
+              ${entrada.whatsapp ?? null}, NULL, true, true)
       RETURNING id`;
 
     if (!criado) throw new ErroDominio('Não foi possível criar o Usuário.');
@@ -69,8 +69,10 @@ export const defEditarUsuario: DefinicaoAcao<typeof schemaEditarUsuario, null> =
       email: string;
       profile: string;
       editor_label: string | null;
+      whatsapp: string | null;
     }[]>`
-      SELECT id, name, email, profile, editor_label FROM users WHERE id = ${entrada.usuarioId} FOR UPDATE`;
+      SELECT id, name, email, profile, editor_label, whatsapp
+      FROM users WHERE id = ${entrada.usuarioId} FOR UPDATE`;
 
     if (!antes) throw new ErroDominio('Usuário não encontrado.');
 
@@ -82,6 +84,7 @@ export const defEditarUsuario: DefinicaoAcao<typeof schemaEditarUsuario, null> =
              email        = ${entrada.email},
              profile      = ${entrada.perfil},
              editor_label = ${entrada.editorLabel ?? null},
+             whatsapp     = ${entrada.whatsapp ?? null},
              updated_at   = now()
        WHERE id = ${entrada.usuarioId}`;
 
@@ -94,8 +97,20 @@ export const defEditarUsuario: DefinicaoAcao<typeof schemaEditarUsuario, null> =
       acao: 'editar_usuario',
       usuarioId: usuario.id,
       alvo: entrada.usuarioId,
-      antes: { nome: antes.name, email: antes.email, perfil: antes.profile, editorLabel: antes.editor_label },
-      depois: { nome: entrada.nome, email: entrada.email, perfil: entrada.perfil, editorLabel: entrada.editorLabel },
+      antes: {
+        nome: antes.name,
+        email: antes.email,
+        perfil: antes.profile,
+        editorLabel: antes.editor_label,
+        whatsapp: antes.whatsapp,
+      },
+      depois: {
+        nome: entrada.nome,
+        email: entrada.email,
+        perfil: entrada.perfil,
+        editorLabel: entrada.editorLabel,
+        whatsapp: entrada.whatsapp ?? null,
+      },
     });
 
     return { dados: null, mensagem: 'Usuário atualizado.' };

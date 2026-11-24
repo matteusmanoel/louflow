@@ -6,6 +6,7 @@ export type EntregaListada = {
   entregaId: string;
   demandaId: string;
   demandaTitulo: string;
+  influencerId: string | null;
   versao: number;
   link: string;
   nota: string | null;
@@ -29,6 +30,7 @@ export async function listarAprovacoes(usuario: UsuarioSessao): Promise<EntregaL
       id: string;
       demand_id: string;
       demand_title: string;
+      influencer_id: string | null;
       version: number;
       link: string;
       note: string | null;
@@ -44,6 +46,7 @@ export async function listarAprovacoes(usuario: UsuarioSessao): Promise<EntregaL
       d.id,
       d.demand_id,
       dem.title AS demand_title,
+      dem.influencer_id,
       d.version,
       d.link,
       d.note,
@@ -76,6 +79,7 @@ export async function listarAprovacoes(usuario: UsuarioSessao): Promise<EntregaL
     entregaId: r.id,
     demandaId: r.demand_id,
     demandaTitulo: r.demand_title,
+    influencerId: r.influencer_id,
     versao: r.version,
     link: r.link,
     nota: r.note,
@@ -97,6 +101,7 @@ export async function listarEntregasDemanda(demandaId: string): Promise<EntregaL
       id: string;
       demand_id: string;
       demand_title: string;
+      influencer_id: string | null;
       version: number;
       link: string;
       note: string | null;
@@ -112,6 +117,7 @@ export async function listarEntregasDemanda(demandaId: string): Promise<EntregaL
       d.id,
       d.demand_id,
       dem.title  AS demand_title,
+      dem.influencer_id,
       d.version,
       d.link,
       d.note,
@@ -132,6 +138,7 @@ export async function listarEntregasDemanda(demandaId: string): Promise<EntregaL
     entregaId: r.id,
     demandaId: r.demand_id,
     demandaTitulo: r.demand_title,
+    influencerId: r.influencer_id,
     versao: r.version,
     link: r.link,
     nota: r.note,

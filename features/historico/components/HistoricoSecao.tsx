@@ -11,6 +11,7 @@ const ROTULOS_ACAO: Record<string, string> = {
   lixeira: 'Movida para a Lixeira',
   recebimento_confirmado: 'Recebimento confirmado',
   ficha_tecnica_salva: 'Ficha técnica salva',
+  ficha_tecnica_enviada: 'Ficha técnica enviada',
   comentou: 'Comentou',
   postagem_agendada: 'Postagem agendada',
   agendamento_cancelado: 'Agendamento cancelado',

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
-import type { DemandaAgenda } from '../consultas';
+import type { DemandaAgenda, PublicacaoAgenda } from '../consultas';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,6 +17,7 @@ type Props = {
   mes: number;
   ano: number;
   demandas: DemandaAgenda[];
+  publicacoes: PublicacaoAgenda[];
   diaSelecionado?: number;
   podeGerenciar?: boolean;
 };
@@ -42,7 +44,9 @@ function frasePostagens(qtd: number): string {
   return qtd === 1 ? '1 postagem' : `${qtd} postagens`;
 }
 
-export function CalendarioAgenda({ mes, ano, demandas, diaSelecionado }: Props) {
+const ROTULO_FORMATO: Record<string, string> = { imagem: 'Foto', reel: 'Reel', story: 'Story' };
+
+export function CalendarioAgenda({ mes, ano, demandas, publicacoes, diaSelecionado }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -68,6 +72,11 @@ export function CalendarioAgenda({ mes, ano, demandas, diaSelecionado }: Props) 
     if (!porDia.has(diaNum)) porDia.set(diaNum, []);
     porDia.get(diaNum)!.push(d);
   }
+  const publicacoesPorDia = new Map<number, PublicacaoAgenda[]>();
+  for (const item of publicacoes) {
+    if (!publicacoesPorDia.has(item.dia)) publicacoesPorDia.set(item.dia, []);
+    publicacoesPorDia.get(item.dia)!.push(item);
+  }
 
   function navegarMes(delta: number) {
     let novoMes = mes + delta;
@@ -86,6 +95,8 @@ export function CalendarioAgenda({ mes, ano, demandas, diaSelecionado }: Props) 
   }
 
   const demandasDia = diaAberto ? (porDia.get(diaAberto) ?? []) : [];
+  const publicacoesDia = diaAberto ? (publicacoesPorDia.get(diaAberto) ?? []) : [];
+  const totalDia = demandasDia.length + publicacoesDia.length;
   const hoje = new Date();
   const ehMesAtual = hoje.getFullYear() === ano && hoje.getMonth() + 1 === mes;
   const diaAtual = ehMesAtual ? hoje.getDate() : -1;
@@ -152,7 +163,7 @@ export function CalendarioAgenda({ mes, ano, demandas, diaSelecionado }: Props) 
             );
           }
 
-          const qtd = porDia.get(dia)?.length ?? 0;
+          const qtd = (porDia.get(dia)?.length ?? 0) + (publicacoesPorDia.get(dia)?.length ?? 0);
           const selecionado = dia === diaAberto;
           const ehHoje = dia === diaAtual;
 
@@ -198,19 +209,58 @@ export function CalendarioAgenda({ mes, ano, demandas, diaSelecionado }: Props) 
       {diaAberto != null && dataPainel && (
         <div className="flex min-w-0 flex-col gap-3">
           <h3 className="m-0 text-base font-medium text-[var(--texto-forte)]">
-            {demandasDia.length === 0 ? 'Nenhuma postagem' : frasePostagens(demandasDia.length)} em {dataPainel}
+            {totalDia === 0 ? 'Nenhuma postagem' : frasePostagens(totalDia)} em {dataPainel}
           </h3>
-          {demandasDia.length === 0 ? (
+          {totalDia === 0 ? (
             <EstadoVazio
               icone={CalendarDays}
               titulo="Nenhuma postagem"
-              descricao="Não há demandas agendadas para este dia."
+              descricao="Não há postagens neste dia."
               className="py-8"
             />
           ) : (
             <ul className="m-0 flex list-none flex-col gap-2 p-0">
+              {publicacoesDia.map((item) => {
+                const corpo = (
+                  <Card>
+                    <CardContent className="flex flex-col gap-1.5 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="fonte-titulo font-semibold text-[var(--texto-forte)]">{item.titulo}</span>
+                        <Badge variant={item.status === 'Publicada' ? 'secondary' : 'aprovacao'}>{item.status}</Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-xs text-[var(--texto-suave)]">
+                        <span className="fonte-numero">{item.horario}</span>
+                        <span>Instagram</span>
+                        {item.formato && <span>{ROTULO_FORMATO[item.formato] ?? item.formato}</span>}
+                        {item.conta && <span>@{item.conta}</span>}
+                        <span>{item.marca}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+                return (
+                  <li key={item.id}>
+                    {item.demandaId ? (
+                      <Link
+                        href={`/demandas/${item.demandaId}`}
+                        aria-label={`Abrir demanda de ${item.titulo}`}
+                        className="block rounded-[var(--raio-card)] no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--loumar-600)]"
+                      >
+                        {corpo}
+                      </Link>
+                    ) : (
+                      corpo
+                    )}
+                  </li>
+                );
+              })}
               {demandasDia.map((d) => (
                 <li key={d.id}>
+                  <Link
+                    href={`/demandas/${d.id}`}
+                    aria-label={`Abrir demanda ${d.titulo}`}
+                    className="block rounded-[var(--raio-card)] no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--loumar-600)]"
+                  >
                   <Card>
                     <CardContent className="flex flex-col gap-1.5 p-3">
                       <div className="flex flex-wrap items-center gap-2">
@@ -227,6 +277,7 @@ export function CalendarioAgenda({ mes, ano, demandas, diaSelecionado }: Props) 
                       </div>
                     </CardContent>
                   </Card>
+                  </Link>
                 </li>
               ))}
             </ul>

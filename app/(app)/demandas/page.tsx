@@ -77,6 +77,7 @@ export default async function PaginaDemandas({ searchParams }: Props) {
         podeMover={usuario.permissoes.alterarStatus}
         podeEntregar={usuario.permissoes.editarDemandas}
         podePrioridade={usuario.permissoes.alterarPrioridade}
+        editorId={usuario.perfil === 'Editor' ? usuario.id : null}
       />
     </ContainerPagina>
   );

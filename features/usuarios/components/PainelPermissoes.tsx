@@ -39,6 +39,7 @@ const ROTULOS: Record<ChavePermissao, string> = {
   operarDrone: 'Operar Drone',
   editorPadraoCortes: 'Editor padrão de Cortes',
   notaInformativaRanking: 'Nota informativa no ranking',
+  conectarInstagram: 'Conectar Instagram',
 };
 
 export function PainelPermissoes({ usuarioId, perfil, permissoes, acaoConcederPermissao }: Props) {

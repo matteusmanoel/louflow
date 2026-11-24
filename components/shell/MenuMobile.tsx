@@ -21,11 +21,13 @@ export function MenuMobile({
   nome,
   perfil,
   visivel,
+  podeAvisos,
 }: {
   grupos: GrupoMenu[];
   nome: string;
   perfil: string;
   visivel: boolean;
+  podeAvisos: boolean;
 }) {
   const caminho = usePathname();
   const { menuAberto, setMenuAberto } = useNavegacao();
@@ -91,7 +93,7 @@ export function MenuMobile({
             </div>
           ))}
         </nav>
-        <RodapeConta tom="claro" />
+        <RodapeConta tom="claro" podeAvisos={podeAvisos} />
       </SheetContent>
     </Sheet>
   );

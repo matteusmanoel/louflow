@@ -1,12 +1,13 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { z } from 'zod';
 import { criarAcao } from '@/lib/action';
 import { registrarAuditoria } from '@/lib/audit';
 import { COOKIE_DISPOSITIVO, COOKIE_SESSAO, gravarCookieDispositivo, gravarCookieSessao, limparCookies } from '@/lib/auth';
 import { db, emTransacao } from '@/lib/db';
+import { caminhoTrocaPin, destinoFinal } from '@/lib/destino';
 import { ErroDominio } from '@/lib/errors';
 import { FORMATO_PIN } from '@/lib/pin';
 import { autenticar, criarDispositivoConfiavel, criarSessao, encerrarSessao, esquecerDispositivo, trocarPinProprio } from '@/lib/session';
@@ -24,35 +25,36 @@ const schemaLogin = z.object({
   para: z.string().optional(),
 });
 
-function destinoSeguro(valor: string | undefined): string {
-  return valor && valor.startsWith('/') && !valor.startsWith('//') ? valor : '/';
-}
-
 export async function entrar(_anterior: EstadoFormulario, form: FormData): Promise<EstadoFormulario> {
-  const entrada = schemaLogin.safeParse({
-    email: form.get('email'),
-    pin: form.get('pin'),
-    lembrar: form.get('lembrar') === 'on',
-    para: form.get('para') ?? undefined,
-  });
-  if (!entrada.success) return { mensagem: MENSAGEM_INVALIDO };
+  try {
+    const entrada = schemaLogin.safeParse({
+      email: form.get('email'),
+      pin: form.get('pin'),
+      lembrar: form.get('lembrar') === 'on',
+      para: form.get('para') ?? undefined,
+    });
+    if (!entrada.success) return { mensagem: MENSAGEM_INVALIDO };
 
-  const { email, pin, lembrar, para } = entrada.data;
-  const resultado = await emTransacao((tx) => autenticar(tx, email, pin));
-  if (!resultado.ok) {
-    if (resultado.motivo === 'bloqueado') {
-      const minutos = Math.max(1, Math.ceil((resultado.liberaEm.getTime() - Date.now()) / 60000));
-      return { mensagem: `Acesso bloqueado por excesso de tentativas. Tente novamente em ${minutos} min.` };
+    const { email, pin, lembrar, para } = entrada.data;
+    const resultado = await emTransacao((tx) => autenticar(tx, email, pin));
+    if (!resultado.ok) {
+      if (resultado.motivo === 'bloqueado') {
+        const minutos = Math.max(1, Math.ceil((resultado.liberaEm.getTime() - Date.now()) / 60000));
+        return { mensagem: `Acesso bloqueado por excesso de tentativas. Tente novamente em ${minutos} min.` };
+      }
+      return { mensagem: MENSAGEM_INVALIDO };
     }
-    return { mensagem: MENSAGEM_INVALIDO };
-  }
 
-  const sessao = await criarSessao(db(), resultado.userId);
-  await gravarCookieSessao(sessao);
-  if (lembrar && !resultado.deveTrocarPin) {
-    await gravarCookieDispositivo(await criarDispositivoConfiavel(db(), resultado.userId));
+    const sessao = await criarSessao(db(), resultado.userId);
+    await gravarCookieSessao(sessao);
+    if (lembrar && !resultado.deveTrocarPin) {
+      await gravarCookieDispositivo(await criarDispositivoConfiavel(db(), resultado.userId));
+    }
+    redirect(resultado.deveTrocarPin ? caminhoTrocaPin(para) : destinoFinal(para));
+  } catch (erro) {
+    unstable_rethrow(erro);
+    return { mensagem: 'Não foi possível entrar agora. Tente novamente.' };
   }
-  redirect(resultado.deveTrocarPin ? '/trocar-pin' : destinoSeguro(para));
 }
 
 const acaoTrocarPin = criarAcao({
@@ -78,7 +80,7 @@ export async function trocarPin(_anterior: EstadoFormulario, form: FormData): Pr
   const resultado = await acaoTrocarPin({ pin: form.get('pin'), confirmacao: form.get('confirmacao') });
   if (!resultado.ok) return { mensagem: resultado.mensagem };
   await gravarCookieSessao(resultado.dados.token);
-  redirect('/');
+  redirect(destinoFinal(form.get('para')));
 }
 
 export async function sair(): Promise<void> {

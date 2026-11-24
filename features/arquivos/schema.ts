@@ -26,5 +26,10 @@ export const schemaPrepararUpload = z.object({
     .max(TAMANHO_MAXIMO_BYTES, 'O arquivo passa de 1 GB.'),
 });
 
+export const schemaDescartarUploads = z.object({
+  urls: z.array(z.string().url('URL do arquivo inválida.')).max(LIMITE_ARQUIVOS, 'São permitidos até 20 arquivos.'),
+});
+
 export type ItemArquivo = z.infer<typeof schemaItemArquivo>;
 export type EntradaPrepararUpload = z.infer<typeof schemaPrepararUpload>;
+export type EntradaDescartarUploads = z.infer<typeof schemaDescartarUploads>;

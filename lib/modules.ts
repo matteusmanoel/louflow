@@ -24,6 +24,7 @@ const admin = (u: UsuarioSessao) => u.perfil === 'Administrador';
 export const MODULOS: readonly Modulo[] = [
   { slug: 'dashboard', rotulo: 'Dashboard', grupo: 'Acompanhamento', fatia: 'S2-02 #11574', permitido: naoPremios },
   { slug: 'demandas', rotulo: 'Demandas', grupo: 'Produção', fatia: 'S1-02 #11557', permitido: naoPremios },
+  { slug: 'drive', rotulo: 'Drive', grupo: 'Produção', fatia: 'S4-02', permitido: naoPremios },
   { slug: 'fichas', rotulo: 'Fila de Fichas', grupo: 'Produção', fatia: 'S1-02 #11557', permitido: (u) => u.perfil === 'Administrador' || u.perfil === 'Editor' },
   { slug: 'ficha-tecnica', rotulo: 'Ficha Técnica', grupo: 'Produção', fatia: 'S1-11 #11566', permitido: (u) => naoPremios(u) && u.permissoes.enviarFicha },
   { slug: 'aprovacoes', rotulo: 'Aprovações', grupo: 'Produção', fatia: 'S1-14 #11569', permitido: (u) => u.perfil === 'Administrador' || u.perfil === 'Influencer' || u.ehAprovadorDelegado },
@@ -33,7 +34,6 @@ export const MODULOS: readonly Modulo[] = [
   { slug: 'midia-movel', rotulo: 'Mídia Móvel', grupo: 'Recursos', fatia: 'S1-04 #11559', permitido: naoPremios },
   { slug: 'drone', rotulo: 'Uso de Drone', grupo: 'Recursos', fatia: 'S1-05 #11560', permitido: (u) => naoPremios(u) && u.permissoes.operarDrone },
   { slug: 'cortes', rotulo: 'Cortes', grupo: 'Produção', fatia: 'S1-06 #11561', permitido: (u) => naoPremios(u) && u.permissoes.verAbaCortes },
-  { slug: 'equipamentos', rotulo: 'Catálogo de Equipamentos', grupo: 'Recursos', fatia: 'S3-02 #11579', permitido: naoPremios },
   { slug: 'relatorio', rotulo: 'Relatório Diário', grupo: 'Acompanhamento', fatia: 'S2-03 #11575', permitido: (u) => naoPremios(u) && u.permissoes.verRelatorios },
   { slug: 'ranking', rotulo: 'Ranking', grupo: 'Acompanhamento', fatia: 'S2-04 #11576', permitido: (u) => naoPremios(u) && u.permissoes.verRelatorios },
   { slug: 'analista', rotulo: 'Analista', grupo: 'Acompanhamento', fatia: 'S2-05 #11577', permitido: (u) => naoPremios(u) && u.permissoes.usarAnalista },
@@ -41,8 +41,9 @@ export const MODULOS: readonly Modulo[] = [
   { slug: 'sorteios', rotulo: 'Sorteios', grupo: 'Acompanhamento', fatia: 'S3-01 #11578', permitido: (u) => u.permissoes.verSorteios },
   { slug: 'usuarios', rotulo: 'Usuários', grupo: 'Administração', fatia: 'S1-01 #11556', permitido: (u) => naoPremios(u) && u.permissoes.gerenciarUsuarios },
   { slug: 'lixeira', rotulo: 'Lixeira', grupo: 'Administração', fatia: 'S1-13 #11568', permitido: (u) => naoPremios(u) && u.permissoes.verLixeira },
+  { slug: 'instagram', rotulo: 'Instagram', grupo: 'Administração', fatia: 'S4-01', permitido: (u) => naoPremios(u) && u.permissoes.conectarInstagram },
   { slug: 'auditoria', rotulo: 'Auditoria', grupo: 'Administração', fatia: 'S1-13 #11568', permitido: admin },
-  { slug: 'preferencias', rotulo: 'Preferências', grupo: 'Conta', fatia: 'S1-08 #11563', permitido: naoPremios },
+  { slug: 'preferencias', rotulo: 'Avisos', grupo: 'Conta', fatia: 'S1-08 #11563', permitido: (u) => naoPremios(u) && u.permissoes.gerenciarUsuarios },
 ];
 
 export const ORDEM_GRUPOS: readonly GrupoModulo[] = ['Produção', 'Postagem', 'Recursos', 'Acompanhamento', 'Administração', 'Conta'];

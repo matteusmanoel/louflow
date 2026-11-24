@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 import { CalendarDays, User, Loader2, InboxIcon } from 'lucide-react';
@@ -47,7 +48,10 @@ export function FilaDeFichas({ demandas }: { demandas: Demanda[] }) {
           key={d.id}
           className="flex items-center gap-4 flex-wrap rounded-[var(--raio-card)] border border-[var(--borda-app)] bg-[var(--superficie)] shadow-[var(--sombra-card)] p-4"
         >
-          <div className="flex-1 min-w-[200px]">
+          <Link
+            href={`/demandas/${d.id}`}
+            className="min-w-[200px] flex-1 no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--loumar-600)]"
+          >
             <div className="fonte-titulo font-semibold text-sm text-[var(--texto-forte)]">{d.title}</div>
             <div className="flex gap-3 text-[11px] text-[var(--texto-suave)] mt-1 flex-wrap">
               <span>{d.format}</span>
@@ -64,7 +68,7 @@ export function FilaDeFichas({ demandas }: { demandas: Demanda[] }) {
                 </span>
               )}
             </div>
-          </div>
+          </Link>
 
           <BadgePrioridade prioridade={d.priority} />
 

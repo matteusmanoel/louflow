@@ -11,6 +11,9 @@ describe('chave de arquivo', () => {
     expect(chave).toBe(`demandas/${DEMANDA}/11111111-1111-4111-8111-111111111111-meu-video-final.mp4`);
     expect(chaveDoDono(chave, 'demandas', DEMANDA)).toBe(true);
     expect(chaveDoDono(chave, 'demandas', 'LF00000000CD')).toBe(false);
+    const livre = montarChave('drive', 'raiz', 'notas.pdf', '11111111-1111-4111-8111-111111111111');
+    expect(livre).toBe('drive/raiz/11111111-1111-4111-8111-111111111111-notas.pdf');
+    expect(chaveDoDono(livre, 'drive', 'raiz')).toBe(true);
   });
 
   it('recusa identificador com caminho', () => {
