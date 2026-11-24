@@ -12,8 +12,12 @@ exports/
 !.env.example
 .vercel/
 
-# Agentes locais
-.cursor/
+# Agentes locais (caches/snapshots). O ambiente versionado para Cloud Agents fica abaixo.
+.cursor/*
+!.cursor/environment.json
+!.cursor/Dockerfile
+!.cursor/start.sh
+!.cursor/pin-sintetico.ts
 manifest/
 docs/reports/
 # Descoberta contém IDs de implantação e nomes do legado

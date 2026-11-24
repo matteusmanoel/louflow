@@ -1,0 +1,16 @@
+# TI — zona protegida e ambiente dos agentes. Ver docs/pr-review-guide.md §1.1.
+# Só vale com "Require review from Code Owners" em develop e main.
+.cursor/ @matteusmanoel
+.github/ @matteusmanoel
+docker-compose.yml @matteusmanoel
+scripts/db/ @matteusmanoel
+azure-pipelines.yml @matteusmanoel
+package.json @matteusmanoel
+pnpm-lock.yaml @matteusmanoel
+lib/ @matteusmanoel
+db/migrations/ @matteusmanoel
+db/runner.ts @matteusmanoel
+db/seed-guard.ts @matteusmanoel
+db/seed.ts @matteusmanoel
+AGENTS.md @matteusmanoel
+docs/pr-review-guide.md @matteusmanoel

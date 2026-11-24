@@ -10,8 +10,17 @@
 export const ENDPOINTS_PROIBIDOS = ['ep-fancy-field-b665zoxi'] as const;
 
 const HOSTS_LOCAIS = ['localhost', '127.0.0.1'];
+const PARAMS_DESTINO = new Set(['host', 'hostname', 'port', 'hostaddr']);
 
 type EnvSeed = { SEED_ALLOW_REMOTE?: string | undefined; SEED_REMOTE_HOSTS?: string | undefined };
+
+/** Query `host`/`port`/`hostaddr` sobrescreve o authority no postgres.js (libpq). */
+function querySobrescreveDestino(destino: URL): boolean {
+  for (const chave of destino.searchParams.keys()) {
+    if (PARAMS_DESTINO.has(chave.toLowerCase())) return true;
+  }
+  return destino.hostname.includes(',');
+}
 
 /** `ep-xxxx`, `ep-xxxx-pooler` e `ep-xxxx-<compute>` identificam o mesmo endpoint. */
 export function ehEndpointProibido(host: string): boolean {
@@ -21,12 +30,16 @@ export function ehEndpointProibido(host: string): boolean {
 
 /** Lança Error com mensagem segura se o seed não puder rodar contra `url`; devolve o host se puder. */
 export function validarDestinoSeed(url: string, env: EnvSeed = {}): string {
-  let host: string;
+  let destino: URL;
   try {
-    host = new URL(url).hostname.toLowerCase();
+    destino = new URL(url);
   } catch {
     throw new Error('Seed recusado: DATABASE_URL inválida.');
   }
+  if (querySobrescreveDestino(destino)) {
+    throw new Error('Seed recusado: DATABASE_URL inválida.');
+  }
+  const host = destino.hostname.toLowerCase();
   if (ehEndpointProibido(host)) {
     throw new Error('Seed recusado: o destino é o banco de produção (Neon main), proibido sempre.');
   }

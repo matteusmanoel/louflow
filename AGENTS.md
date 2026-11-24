@@ -38,7 +38,8 @@ Alterar exige justificativa no PR e revisão explícita (ver `docs/pr-review-gui
 `lib/**`, `db/migrations/**` (só arquivos novos), `db/runner.ts`, `proxy.ts`, `features/acesso/**`,
 `features/status/**` (dona: S1-10), `features/demandas/secoes.ts`, `app/api/{tv,cron,sync,sessao}/**`,
 `app/(app)/layout.tsx`, `app/layout.tsx`, `next.config.ts`, `azure-pipelines.yml`, `package.json`, `pnpm-lock.yaml`,
-`eslint.config.mjs`, `tsconfig.json`, `vitest.config.mts`.
+`eslint.config.mjs`, `tsconfig.json`, `vitest.config.mts`,
+`.cursor/**`, `.github/**`, `docker-compose.yml`, `scripts/db/**`.
 
 Dependência nova em `package.json` só com justificativa de uma linha no PR.
 
@@ -79,10 +80,10 @@ Testes cobrem o comportamento público da fatia (Server Actions e consultas cont
 
 1. Parta de `develop` atualizado: `git switch develop && git pull && git switch -c feature/<taskId>-<slug>`.
 2. Trabalhe em worktree próprio quando houver agentes em paralelo (`git worktree add ../louflow-<taskId> -b feature/<taskId>-<slug> develop`).
-3. Commits: `feat(<fatia>): descrição` + corpo curto + `AB#<taskId> AB#<userStoryId>`. **Proibido** qualquer trailer `Co-authored-by`.
-4. PR para `develop` no repositório `louflow` (projeto ADO `louflow-marketing`), título `feat(<fatia>): <descrição>`, descrição com `AB#<id>`, resumo, checklist dos critérios de aceite com a evidência de cada um, e arquivos fora da pasta própria (se houver) justificados.
+3. Commits: `feat(<fatia>): descrição` + corpo curto. Se a tarefa tiver item no Azure Boards, acrescente `AB#<taskId> AB#<userStoryId>` (opcional). **Proibido** qualquer trailer `Co-authored-by`.
+4. PR para `develop` no GitHub `matteusmanoel/louflow` (repositório oficial). Título `feat(<fatia>): <descrição>`, descrição com o template em `.github/pull_request_template.md`, resumo, checklist dos critérios de aceite com a evidência de cada um, e arquivos fora da pasta própria (se houver) justificados. Ainda não há projeto nem repositório do LouFlow no Azure DevOps; não abra PR lá.
 5. Antes do PR: `git fetch && git rebase origin/develop` e o gate de novo.
-6. `main` só recebe merge com aprovação humana.
+6. `main` só recebe merge com aprovação humana. Não faça merge.
 
 ## 7. Segurança e dados
 
@@ -96,7 +97,16 @@ Testes cobrem o comportamento público da fatia (Server Actions e consultas cont
 
 O sistema antigo (Apps Script) fica **fora do repositório**, apenas na máquina local, somente leitura:
 `/Users/matteusmanoel/Projects/Loumar/louflow/demandas-edits/` (código `.js`/`.html`).
-Use para conferir regras de negócio. Nunca copie dados, nunca faça commit desse diretório nem de planilhas (`*.xlsx`), e nunca reproduza nomes de pessoas no código. Se o legado conflitar com o PRD, o PRD vence.
+Use para conferir regras de negócio. Nunca copie dados, nunca faça commit desse diretório nem de planilhas (`*.xlsx`), e nunca reproduza nomes de pessoas no código. Se o legado conflitar com o PRD, o PRD vence. Na VM de Cloud Agent esse diretório **não existe**; use [`docs/prd-louflow.md`](docs/prd-louflow.md) e, se faltar regra, pergunte no PR.
+
+## Cursor Cloud specific instructions
+
+Detalhes do boot, secrets e egress: [`docs/ENV-SETUP.md`](docs/ENV-SETUP.md). Ambiente: `.cursor/environment.json`.
+
+- **Nunca** peça nem use segredos reais; **nunca** conecte a Neon, Vercel, WhatsApp ou S3; **não** toque em `main` nem em `azure-pipelines.yml`.
+- Login sintético: `admin@exemplo.test` / `482916` (o mesmo de `e2e/contas.ts`). Nenhum segredo real; sem WhatsApp/S3/Neon/Vercel.
+- Gate manual (§5) antes do PR. Ainda **não** há GitHub Actions nem pipeline ADO neste repositório. E2E (S1-17): `pnpm exec playwright install --with-deps chromium` e `E2E_BASE_URL` na porta 3000 se o `next dev` do boot já estiver no ar.
+- PR no GitHub contra `develop`. Sem merge, sem `Co-authored-by`. Revisão: [`docs/pr-review-guide.md`](docs/pr-review-guide.md) (§4). Zona protegida (§2 / guia §1.1), inclusive `.cursor/**` e `.github/**`, nunca é aprovada por bot: marcar a TI.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

@@ -34,6 +34,15 @@ describe('guard do seed', () => {
     }
   });
 
+  it('recusa query host/port/hostaddr que o postgres.js usa no lugar do authority', () => {
+    const local = 'postgres://louflow:louflow@127.0.0.1:54329/louflow';
+    expect(() => validarDestinoSeed(`${local}?host=remote.example.com`)).toThrow(/inválida/);
+    expect(() => validarDestinoSeed(`${local}?port=5432`)).toThrow(/inválida/);
+    expect(() => validarDestinoSeed(`${local}?hostaddr=1.2.3.4`)).toThrow(/inválida/);
+    expect(() => validarDestinoSeed(`${local}?HoSt=remote.example.com`)).toThrow(/inválida/);
+    expect(validarDestinoSeed(`${local}?sslmode=disable`)).toBe('127.0.0.1');
+  });
+
   it('não confunde endpoint parecido com o de produção', () => {
     expect(ehEndpointProibido(`${ENDPOINTS_PROIBIDOS[0]}9.c-2.sa-east-1.aws.neon.tech`)).toBe(false);
     expect(ehEndpointProibido(HOST_DEV)).toBe(false);
