@@ -267,6 +267,7 @@ Estratégia de branches no GitHub: `develop` (padrão de PRs) e `main` (produç�
 6. Não migrar: as 71 abas `Backup_*` e os PINs. Os Sorteios antigos dependem de P3.
 7. **Ensaio obrigatório** num branch Neon descartável. Comparar a contagem de linhas por aba com a de tabelas antes da virada.
 8. Virada: congelar a planilha (somente leitura), importar, liberar o reset de PIN e trocar o link.
+9. No dia seguinte, às 7h30 (America/Sao_Paulo), `scripts/virada/avisar-acesso.ts` manda **uma mensagem privada** por WhatsApp, na instância uazapi, para o `users.whatsapp` de cada usuário ativo importado que ainda não tem PIN. O texto leva o link (`APP_URL`), o e-mail e um PIN provisório de 6 dígitos. O primeiro acesso troca o PIN. A mensagem não vai para o grupo, não inclui `@exemplo.test` e o PIN não entra em log. Sem `VIRADA_CONFIRMADA=sim` e sem `--enviar`, o script só conta.
 
 ## 13. Observabilidade
 
