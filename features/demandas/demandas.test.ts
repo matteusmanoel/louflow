@@ -248,6 +248,20 @@ describe('listarDemandas — visibilidade', () => {
     expect(ids).toContain(d1);
     expect(ids).toContain(d2);
   });
+
+  it('Influencer vê demandas sem editor e as próprias já assumidas', async () => {
+    const { id: influencerId } = await criarUsuario({ perfil: 'Influencer' });
+    const { id: outro } = await criarUsuario({ perfil: 'Influencer' });
+    const { id: editorId } = await criarUsuario({ perfil: 'Editor' });
+    const semEditor = await criarDemandaDir({ influencer_id: outro, editor_id: null });
+    const propria = await criarDemandaDir({ influencer_id: influencerId, editor_id: editorId });
+    const alheia = await criarDemandaDir({ influencer_id: outro, editor_id: editorId });
+
+    const ids = (await listarDemandas(sqlTeste(), sessao(influencerId, 'Influencer'))).map((d) => d.id);
+    expect(ids).toContain(semEditor);
+    expect(ids).toContain(propria);
+    expect(ids).not.toContain(alheia);
+  });
 });
 
 // ──────────────────────────────────────────────────────────
@@ -434,10 +448,8 @@ describe('editarDemanda', () => {
     expect(h?.action).toBe('Demanda editada');
   });
 
-  it('falha sem permissão editarDemandas', async () => {
-    const { id: influencerId } = await criarUsuario({ perfil: 'Influencer' });
-    const u = sessao(influencerId, 'Influencer');
-
+  it('Editor sem editarDemandas não edita', async () => {
+    const { id: editorId } = await criarUsuario({ perfil: 'Editor' });
     const demandaId = await criarDemandaDir({});
 
     const resultado = await exec(defEditarDemanda, {
@@ -445,10 +457,60 @@ describe('editarDemanda', () => {
       title: 'Tentativa',
       format: 'Pauta',
       priority: 'Normal',
-    }, u);
+    }, sessao(editorId, 'Editor'));
 
     expect(resultado.ok).toBe(false);
     expect(resultado.mensagem).toMatch(/permissão/i);
+  });
+
+  it('Influencer edita demanda alheia sem editor e não troca formato, influencer nem editor', async () => {
+    const { id: influencerId } = await criarUsuario({ perfil: 'Influencer' });
+    const { id: outro } = await criarUsuario({ perfil: 'Influencer' });
+    const { id: editorId } = await criarUsuario({ perfil: 'Editor' });
+    const demandaId = await criarDemandaDir({ format: 'Pauta', influencer_id: outro, editor_id: null });
+
+    const resultado = await exec(defEditarDemanda, {
+      id: demandaId,
+      title: 'Ajustada na fila',
+      format: 'Cortes',
+      influencer_id: influencerId,
+      editor_id: editorId,
+      priority: 'Alta',
+    }, sessao(influencerId, 'Influencer'));
+
+    expect(resultado.ok).toBe(true);
+    const [d] = await sqlTeste()<{
+      title: string;
+      format: string;
+      influencer_id: string;
+      editor_id: string | null;
+      priority: string;
+    }[]>`
+      SELECT title, format, influencer_id, editor_id, priority FROM demands WHERE id = ${demandaId}
+    `;
+    expect(d).toMatchObject({
+      title: 'Ajustada na fila',
+      format: 'Pauta',
+      influencer_id: outro,
+      editor_id: null,
+      priority: 'Alta',
+    });
+  });
+
+  it('Influencer não edita depois que alguém assume', async () => {
+    const { id: influencerId } = await criarUsuario({ perfil: 'Influencer' });
+    const { id: editorId } = await criarUsuario({ perfil: 'Editor' });
+    const demandaId = await criarDemandaDir({ editor_id: editorId });
+
+    const resultado = await exec(defEditarDemanda, {
+      id: demandaId,
+      title: 'Tarde',
+      format: 'Pauta',
+      priority: 'Normal',
+    }, sessao(influencerId, 'Influencer'));
+
+    expect(resultado.ok).toBe(false);
+    expect(resultado.mensagem).toBe('Esta demanda já foi assumida e não pode mais ser editada.');
   });
 });
 

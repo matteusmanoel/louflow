@@ -217,14 +217,14 @@ A produção tem **quatro** gatilhos de tempo, e não um:
 | Rotina | Hoje | Destino |
 |---|---|---|
 | Encerrar Captações e Reservas vencidas | A cada 5 min e também em cada leitura | `POST /api/cron/encerramentos` a cada 5 min. A leitura também aplica a regra, como hoje. `UPDATE … WHERE fim <= now() AND situacao = ...` é idempotente |
-| Pendências do Influencer: prazo padrão de 24 h, lembretes e aviso à administração | A cada 15 min | `POST /api/cron/pendencias` a cada 15 min |
-| Alerta de prazo por Editor | Diário às 08:00 | `POST /api/cron/alertas-prazo` diário às 08:00 America/Sao_Paulo |
+| Resumo diário do grupo (atrasadas e em aprovação) | A cada 15 min; o handler só envia na hora configurada | `POST /api/cron/pendencias` a cada 15 min. Padrão 10:00 America/Sao_Paulo. Uma mensagem por dia |
+| Mesmo resumo, pela rota antiga de prazo | Diário | `POST /api/cron/alertas-prazo` chama o mesmo resumo. A trava impede uma segunda mensagem |
 | Publicar agendamentos de Instagram | — | `POST /api/cron/instagram` a cada 1 min. Idempotente: reusa o container e não republica quem já tem `ig_media_id` |
 
 Contrato de toda rota de cron:
 
 - Exige `Authorization: Bearer $CRON_SECRET`. Sem esse cabeçalho, responde 401.
-- É idempotente: rodar duas vezes não duplica avisos. Prazo e pendência usam `notification_dispatches` como trava.
+- É idempotente: rodar duas vezes não duplica avisos. O resumo diário usa `notification_dispatches` (`resumo_diario` + o dia) como trava.
 - Termina dentro do limite de execução da função.
 - Registra falhas em `error_log`.
 
@@ -235,8 +235,9 @@ O Vercel Cron do plano Hobby roda só uma vez por dia. Por isso um agendador ext
 - O aviso só sai **depois do commit**. Uma falha de envio não desfaz a operação e é registrada em `error_log`.
 - O destino é um só: a conversa de teste ou, com `UAZAPI_GRUPO_LIBERADO=true`, o grupo do setor. Não há opt-out individual.
 - Menção (`@` e o campo `mentions`) só vai para grupo, e só de quem tem telefone no cadastro. Nos outros casos a mensagem usa o nome.
-- Ajuste, aprovação e editor atribuído saem na hora. Prazo e pendência do influencer saem no horário e no intervalo definidos pelo admin.
-- Status (fora o ajuste) e comentário não geram aviso.
+- O grupo recebe só o resumo diário, na hora definida pelo admin (padrão 10:00). Atrasadas mencionam o Editor. Demandas em Aprovação mencionam o Influencer.
+- Ajuste, aprovação e editor atribuído não saem no grupo. Ficam na demanda e no sino.
+- Status e comentário não geram aviso no grupo.
 
 ## 10. Painel de TV
 

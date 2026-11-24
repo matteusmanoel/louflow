@@ -17,6 +17,7 @@ export type TipoNotificacao =
   | 'concluida_aprovada'
   | 'prazo_proximo'
   | 'pendencia_influencer'
+  | 'resumo_diario'
   | 'aviso_administracao';
 
 export type Notificacao = {

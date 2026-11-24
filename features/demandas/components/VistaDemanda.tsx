@@ -65,7 +65,8 @@ export async function VistaDemanda({
   await exigirAcessoDemanda(usuario, demanda);
 
   const abaAtiva = abaValida(aba);
-  const podeEditar = usuario.permissoes.editarDemandas;
+  const podeEditar =
+    usuario.permissoes.editarDemandas || (usuario.perfil === 'Influencer' && demanda.editor_id === null);
   const linkExterno = await linkAcessivel(demanda.link);
   const arquivosDemanda = await Promise.all(
     (await listarArquivosDemanda(demanda.id))

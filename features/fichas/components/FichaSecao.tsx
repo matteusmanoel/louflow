@@ -1,5 +1,5 @@
 import type { PropsSecaoDemanda } from '@/features/demandas/secoes';
-import { obterFichaEnviadaDb, obterFichaTecnicaDb } from '@/features/fichas/consultas';
+import { demandaSemEditor, obterFichaEnviadaDb, obterFichaTecnicaDb } from '@/features/fichas/consultas';
 import { formatarData } from '@/lib/datas';
 import { FormFichaTecnica } from './FormFichaTecnica';
 import { EditarFicha } from './EditarFicha';
@@ -14,7 +14,8 @@ export async function FichaSecao({ demandaId, usuario }: PropsSecaoDemanda) {
   const ficha = await obterFichaTecnicaDb(demandaId);
   // Ficha enviada pelo Influencer: a leitura é conferida no servidor (dono, Editor da Demanda, Fila, Administrador).
   const enviada = await obterFichaEnviadaDb(demandaId, usuario);
-  const podeEditar = usuario.permissoes.editarDemandas;
+  const semEditor = await demandaSemEditor(demandaId);
+  const podeEditar = usuario.permissoes.editarDemandas || (usuario.perfil === 'Influencer' && semEditor);
 
   return (
     <section

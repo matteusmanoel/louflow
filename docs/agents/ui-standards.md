@@ -380,7 +380,6 @@ Mapeamento de ícones **em uso** (fonte de verdade). Hoje ele está repetido em 
 | `midia-movel` | `Smartphone` |
 | `drone` | `Plane` |
 | `cortes` | `Scissors` |
-| `equipamentos` | `Package` |
 | `relatorio` | `BarChart2` |
 | `ranking` | `Trophy` |
 | `analista` | `Brain` |

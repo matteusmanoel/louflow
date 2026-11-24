@@ -60,6 +60,14 @@ export async function obterFichaTecnicaDb(demandaId: string): Promise<FichaTecni
   return obterFichaTecnica(db(), demandaId);
 }
 
+/** Verdadeiro quando a Demanda existe e ainda não tem Editor. */
+export async function demandaSemEditor(demandaId: string): Promise<boolean> {
+  const [linha] = await db()<{ editor_id: string | null }[]>`
+    SELECT editor_id FROM demands WHERE id = ${demandaId} AND deleted_at IS NULL`;
+  if (!linha) return false;
+  return linha.editor_id === null;
+}
+
 export type FichaEnviada = {
   identificacao: string | null;
   observacaoEditor: string | null;
@@ -84,12 +92,14 @@ type DonoDaDemanda = { influencer_id: string | null; editor_id: string | null; f
 
 /**
  * Quem lê a ficha enviada pelo Influencer: Administrador (ou quem vê todas as Demandas), o
- * Influencer que a enviou, o Editor da Demanda e, enquanto a Demanda está na Fila de Fichas
+ * Influencer que a enviou, qualquer Influencer enquanto a Demanda não tem Editor,
+ * o Editor da Demanda e, enquanto a Demanda está na Fila de Fichas
  * (formato Ficha técnica, sem Editor), qualquer Editor (PRD §4.5). Demais perfis, nunca.
  */
 export function podeLerFichaEnviada(usuario: UsuarioSessao, demanda: DonoDaDemanda): boolean {
   if (usuario.perfil === 'Administrador' || usuario.permissoes.verTodasDemandas) return true;
   if (demanda.influencer_id === usuario.id) return true;
+  if (usuario.perfil === 'Influencer' && demanda.editor_id === null) return true;
   if (usuario.perfil !== 'Editor') return false;
   if (demanda.editor_id === usuario.id) return true;
   return demanda.editor_id === null && demanda.format === 'Ficha técnica';

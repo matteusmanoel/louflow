@@ -150,20 +150,23 @@ describe('enviarFichaTecnica (PRD §4.5)', () => {
     expect(await contagens()).toEqual(antes);
   });
 
-  it('não concede editarDemandas: o Influencer segue sem editar a ficha nem a Demanda de ninguém', async () => {
+  it('não concede editarDemandas; o Influencer edita a ficha só enquanto ninguém assumiu', async () => {
     const inf = await criarUsuario({ perfil: 'Influencer' });
+    const editor = await criarUsuario({ perfil: 'Editor' });
     expect(resolverPermissoes('Influencer', []).editarDemandas).toBe(false);
 
     const res = await executarAcao(defEnviarFichaTecnica, FICHA, deps(sessao(inf.id, 'Influencer')));
     expect(res.ok).toBe(true);
     if (!res.ok) return;
 
-    const salvar = await executarAcao(
-      defSalvarFichaTecnica,
-      { demandaId: res.dados.demandaId, formato: 'Reels', duracaoSegundos: 30, plataformas: ['Instagram'], briefing: 'x' },
-      deps(sessao(inf.id, 'Influencer')),
-    );
-    expect(salvar).toEqual({ ok: false, mensagem: MENSAGEM_SEM_PERMISSAO });
+    const ficha = { demandaId: res.dados.demandaId, formato: 'Reels', duracaoSegundos: 30, plataformas: ['Instagram'], briefing: 'x' };
+    const salvar = await executarAcao(defSalvarFichaTecnica, ficha, deps(sessao(inf.id, 'Influencer')));
+    expect(salvar.ok).toBe(true);
+
+    await sqlTeste()`UPDATE demands SET editor_id = ${editor.id} WHERE id = ${res.dados.demandaId}`;
+    const travada = await executarAcao(defSalvarFichaTecnica, ficha, deps(sessao(inf.id, 'Influencer')));
+    expect(travada.ok).toBe(false);
+    if (!travada.ok) expect(travada.mensagem).toMatch(/assumida/);
   });
 
   it('recusa Editor sugerido que não é Editor ativo e não cria nada', async () => {
@@ -268,5 +271,8 @@ describe('leitura da ficha enviada: conferida no servidor', () => {
     expect(podeLerFichaEnviada(editor, { influencer_id: 'i1', editor_id: null, format: 'Ficha técnica' })).toBe(true);
     expect(podeLerFichaEnviada(editor, { influencer_id: 'i1', editor_id: null, format: 'Reels' })).toBe(false);
     expect(podeLerFichaEnviada(editor, { influencer_id: 'i1', editor_id: 'e2', format: 'Ficha técnica' })).toBe(false);
+    const outro = sessao('i2', 'Influencer');
+    expect(podeLerFichaEnviada(outro, { influencer_id: 'i1', editor_id: null, format: 'Reels' })).toBe(true);
+    expect(podeLerFichaEnviada(outro, { influencer_id: 'i1', editor_id: 'e2', format: 'Reels' })).toBe(false);
   });
 });

@@ -72,30 +72,31 @@ export function textoAprovacao(titulo: string, influencerId: string | null): str
   ]);
 }
 
-export function textoPrazo(
-  dias: number,
-  itens: readonly { titulo: string; prazo: string; editorId: string | null }[],
-): string {
-  const visiveis = itens.slice(0, 20);
-  const linhas = visiveis.map((item) => {
-    const quem = item.editorId ? `\n${marcadorMencao(item.editorId)}` : '';
-    return `${destaque(item.titulo)}\n${item.prazo}${quem}`;
-  });
-  const extra = itens.length > visiveis.length ? `E mais ${itens.length - visiveis.length}.` : '';
-  return cartao('Prazos próximos', [`Nos próximos ${dias} dias.`, linhas.join('\n\n'), extra]);
+const LIMITE_LINHAS = 20;
+
+function blocoResumo(titulo: string, linhas: readonly string[], total: number): string {
+  if (total === 0) return '';
+  const extra = total > linhas.length ? `E mais ${total - linhas.length}.` : '';
+  return [titulo, ...linhas, extra].filter(Boolean).join('\n\n');
 }
 
-export function textoPendencia(
-  horas: number,
-  itens: readonly { titulo: string; influencerId: string | null }[],
-): string {
-  const visiveis = itens.slice(0, 20);
-  const linhas = visiveis.map((item) => {
-    const quem = item.influencerId ? `\n${marcadorMencao(item.influencerId)}` : '';
-    return `${destaque(item.titulo)}${quem}`;
+/** Um cartão por dia: atrasadas mencionam o editor; aprovação menciona o influencer. */
+export function textoResumoDiario(itens: {
+  atrasadas: readonly { titulo: string; prazo: string; editorId: string | null }[];
+  aprovacao: readonly { titulo: string; influencerId: string | null }[];
+}): string {
+  const atrasadas = itens.atrasadas.slice(0, LIMITE_LINHAS).map((item) => {
+    const quem = item.editorId ? marcadorMencao(item.editorId) : 'Sem editor';
+    return `${destaque(item.titulo)}\n${item.prazo}\n${quem}`;
   });
-  const extra = itens.length > visiveis.length ? `E mais ${itens.length - visiveis.length}.` : '';
-  return cartao('Pendência em aberto', [`Há mais de ${horas} h sem resposta.`, linhas.join('\n\n'), extra]);
+  const aprovacao = itens.aprovacao.slice(0, LIMITE_LINHAS).map((item) => {
+    const quem = item.influencerId ? marcadorMencao(item.influencerId) : 'Sem influencer';
+    return `${destaque(item.titulo)}\n${quem}`;
+  });
+  return cartao('Pendências do dia', [
+    blocoResumo('Atrasadas', atrasadas, itens.atrasadas.length),
+    blocoResumo('Aguardando aprovação', aprovacao, itens.aprovacao.length),
+  ]);
 }
 
 export function botaoDoAviso(
@@ -105,11 +106,11 @@ export function botaoDoAviso(
   const base = appUrl.replace(/\/$/, '') || 'http://localhost:3000';
   const demanda = aviso.demandaId ? `${base}/demandas/${aviso.demandaId}` : '';
 
+  if (aviso.tipo === 'resumo_diario' || aviso.tipo === 'prazo_proximo') {
+    return { rotulo: 'Abrir demandas', url: `${base}/demandas` };
+  }
   if (aviso.tipo === 'pendencia_influencer') {
     return { rotulo: 'Abrir pendências', url: `${base}/pendencias` };
-  }
-  if (aviso.tipo === 'prazo_proximo') {
-    return { rotulo: 'Abrir demandas', url: `${base}/demandas` };
   }
   if (aviso.tipo === 'concluida_aprovada' && !demanda) {
     return { rotulo: 'Abrir agenda', url: `${base}/agenda` };
@@ -122,49 +123,13 @@ export function botaoDoAviso(
 export function modelosEnsaio(): Notificacao[] {
   return [
     {
-      tipo: 'editor_atribuido',
+      tipo: 'resumo_diario',
       destinatarios: [],
-      assunto: 'Ensaio: editor atribuído',
-      texto: cartao('Nova demanda', [destaque('Pacote de ensaio'), 'Atribuída a Editor de ensaio.']),
-    },
-    {
-      tipo: 'ajuste_solicitado',
-      destinatarios: [],
-      assunto: 'Ensaio: ajuste',
-      texto: cartao('Ajuste solicitado', [
-        destaque('Pacote de ensaio'),
-        'Voltou para a edição.',
-        'Editor\nEditor de ensaio',
-        'Motivo\nTexto de ensaio.',
-      ]),
-    },
-    {
-      tipo: 'concluida_aprovada',
-      destinatarios: [],
-      assunto: 'Ensaio: aprovação',
-      texto: cartao('Demanda aprovada', [
-        destaque('Pacote de ensaio'),
-        'Pode seguir para a postagem.',
-        'Influencer\nInfluencer de ensaio',
-      ]),
-    },
-    {
-      tipo: 'prazo_proximo',
-      destinatarios: [],
-      assunto: 'Ensaio: prazo',
-      texto: cartao('Prazos próximos', [
-        'Nos próximos 2 dias.',
-        `${destaque('Pacote de ensaio')}\n11/11/2026\nEditor de ensaio`,
-      ]),
-    },
-    {
-      tipo: 'pendencia_influencer',
-      destinatarios: [],
-      assunto: 'Ensaio: pendência',
-      texto: cartao('Pendência em aberto', [
-        'Há mais de 24 h sem resposta.',
-        `${destaque('Pacote de ensaio')}\nInfluencer de ensaio`,
-      ]),
+      assunto: 'Ensaio: resumo do dia',
+      texto: textoResumoDiario({
+        atrasadas: [{ titulo: 'Pacote de ensaio', prazo: '11/11/2026', editorId: null }],
+        aprovacao: [{ titulo: 'Pacote em aprovação', influencerId: null }],
+      }),
     },
   ];
 }

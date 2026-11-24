@@ -142,15 +142,15 @@ CREATE TABLE notification_preferences (
 -- Cadência do feed (uma linha). Horários em America/Sao_Paulo.
 CREATE TABLE notification_settings (
   id                    boolean PRIMARY KEY DEFAULT true CHECK (id),
-  deadline_hour         smallint NOT NULL DEFAULT 8,
-  deadline_lead_days    smallint NOT NULL DEFAULT 2,
-  pending_hour          smallint NOT NULL DEFAULT 8,
+  deadline_hour         smallint NOT NULL DEFAULT 10, -- hora do resumo diário; pending_hour recebe o mesmo valor
+  deadline_lead_days    smallint NOT NULL DEFAULT 2, -- sem uso no resumo diário
+  pending_hour          smallint NOT NULL DEFAULT 10,
   pending_grace_hours   smallint NOT NULL DEFAULT 24,
   updated_at            timestamptz NOT NULL DEFAULT now(),
   updated_by            uuid REFERENCES users(id)
 );
 
--- Trava de reenvio dos resumos de prazo e de pendência.
+-- Trava de reenvio. O resumo diário usa kind resumo_diario e a data como subject_key.
 CREATE TABLE notification_dispatches (
   kind         text NOT NULL,
   subject_key  text NOT NULL,

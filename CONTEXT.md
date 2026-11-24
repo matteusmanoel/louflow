@@ -173,7 +173,7 @@ Conjunto de artigos de regras operacionais do time, publicados ou ocultos por um
 _Avoid_: Regras, manual, guia, documentação
 
 **Catálogo de Equipamentos**:
-Referência visual dos equipamentos fotográficos disponíveis ao time.
+Referência visual dos equipamentos fotográficos disponíveis ao time. Fica na Wiki, fora dos artigos editáveis.
 _Avoid_: Inventário, estoque
 
 ### Acompanhamento

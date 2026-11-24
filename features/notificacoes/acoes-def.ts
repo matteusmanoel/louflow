@@ -39,22 +39,18 @@ export const defEnviarEnsaio: DefinicaoAcao<typeof schemaEnsaio, null> = {
 async function gravarCadencia(tx: Db, usuarioId: string, entrada: EntradaCadencia): Promise<void> {
   await tx`
     INSERT INTO notification_settings (
-      id, deadline_hour, deadline_lead_days, pending_hour, pending_grace_hours, updated_at, updated_by
+      id, deadline_hour, pending_hour, updated_at, updated_by
     ) VALUES (
       true,
-      ${entrada.horaPrazo},
-      ${entrada.antecedenciaDias},
-      ${entrada.horaPendencia},
-      ${entrada.folgaHoras},
+      ${entrada.hora},
+      ${entrada.hora},
       now(),
       ${usuarioId}
     )
     ON CONFLICT (id) DO UPDATE SET
-      deadline_hour       = EXCLUDED.deadline_hour,
-      deadline_lead_days  = EXCLUDED.deadline_lead_days,
-      pending_hour        = EXCLUDED.pending_hour,
-      pending_grace_hours = EXCLUDED.pending_grace_hours,
-      updated_at          = now(),
-      updated_by          = EXCLUDED.updated_by
+      deadline_hour = EXCLUDED.deadline_hour,
+      pending_hour  = EXCLUDED.pending_hour,
+      updated_at    = now(),
+      updated_by    = EXCLUDED.updated_by
   `;
 }

@@ -69,6 +69,7 @@ Ordem de construção: as primeiras dependências ficam no topo.
 - Formato, Influencer e Editor vêm de listas configuráveis. Editor "A definir" significa sem Editor.
 - Prazo efetivo = data de postagem; na falta dela, a data para aprovação. Uma Demanda fica **atrasada** quando o prazo passou, ela não está em Status Final e não está em Aprovação.
 - Uma Demanda **sem Editor** com Formato Ficha técnica entra na Fila de Fichas. Um Editor pode assumi-la.
+- O Influencer edita qualquer Demanda ainda sem Editor: título, prioridade, datas, observações, link, arquivos, linha editorial, programa, cortes e a ficha técnica. Formato, Influencer e Editor não mudam nessa edição. Depois que alguém assume, a edição do Influencer fica bloqueada. Quem tem `editarDemandas` continua editando em qualquer etapa.
 - Demandas de Formato Cortes recebem automaticamente o Editor padrão de Cortes e **não** podem ser assumidas.
 - Atualização em lote de Editor, Status e Prioridade, só para Administrador.
 
@@ -175,8 +176,8 @@ O relógio de tempo ativo é exibido em tempo real no cliente.
 #### 4.16 Avisos no WhatsApp
 
 - O grupo do setor é o canal. Não há opt-out individual. O e-mail previsto em P5 foi substituído por este canal.
-- Saem na hora: editor atribuído, ajuste solicitado e aprovação da entrega. Quem precisa agir é mencionado quando o cadastro tem telefone.
-- Prazo e pendência do influencer saem no horário e no intervalo que o admin configura. O padrão é 08:00, America/Sao_Paulo, antecedência de 2 dias e folga de 24 h.
+- Sai uma mensagem por dia, no horário que o admin configura em Avisos. O padrão é 10:00, America/Sao_Paulo. O texto junta as demandas atrasadas (menção ao Editor, ou "Sem editor") e as que estão em Aprovação (menção ao Influencer). Sem pendência, não envia. Não repete no mesmo dia.
+- Atribuição, ajuste e aprovação ficam na demanda e no sino. O grupo não recebe esses avisos na hora.
 - Status e comentário ficam na demanda. O sistema continua funcionando se o envio falhar.
 - O grupo só recebe mensagem com a liberação explícita de produção. Antes disso o destino é a conversa de teste.
 
@@ -192,7 +193,7 @@ O relógio de tempo ativo é exibido em tempo real no cliente.
 
 - **Sorteios:** ganhador, mês, campanha ou programa, prêmio, prazo de retirada, observações e registro de retirada. Exige `verSorteios`.
 - **Importação histórica de Sorteios:** os dados da planilha antiga (abas 2024/2025 e 2026) entram **uma única vez** durante a migração. Não haverá uma função permanente no produto para isso (P3).
-- **Catálogo de Equipamentos:** referência visual somente leitura.
+- **Catálogo de Equipamentos:** referência visual somente leitura, seção fixa da Wiki. Não é artigo editável.
 
 ## 5. Fora de escopo
 
