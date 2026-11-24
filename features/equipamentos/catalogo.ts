@@ -1,3 +1,7 @@
+/** Id fixo na Wiki. Não é linha de wiki_articles. */
+export const ID_CATALOGO_WIKI = 'equipamentos';
+export const ROTA_CATALOGO = '/wiki?artigo=equipamentos';
+
 /** Fotos do catálogo legado, somente leitura. A chave é o nome do arquivo. */
 export const CATALOGO = [
   { arquivo: 'ssd-s3-256gb.jpg', rotulo: 'SSD S3 256 GB' },
