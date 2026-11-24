@@ -37,6 +37,8 @@ type Props = {
   demanda?: Demanda;
   podeDefinirOutroEditor: boolean;
   podeExcluir: boolean;
+  /** Influencer edita o conteúdo, sem trocar formato, influencer ou editor. */
+  travarIdentidade?: boolean;
   variante?: 'pagina' | 'modal';
 };
 
@@ -57,6 +59,7 @@ export function FormDemanda({
   demanda,
   podeDefinirOutroEditor,
   podeExcluir,
+  travarIdentidade = false,
   variante = 'pagina',
 }: Props) {
   const router = useRouter();
@@ -84,9 +87,9 @@ export function FormDemanda({
     const entrada = {
       ...(editando ? { id: demanda!.id } : { id: idPasta }),
       title: dados.get('title') as string,
-      format: dados.get('format') as string,
-      influencer_id: sentinela(dados.get('influencer_id'), 'nenhum'),
-      editor_id: sentinela(dados.get('editor_id'), 'nenhum'),
+      format: travarIdentidade ? (demanda?.format ?? '') : (dados.get('format') as string),
+      influencer_id: travarIdentidade ? (demanda?.influencer_id ?? null) : sentinela(dados.get('influencer_id'), 'nenhum'),
+      editor_id: travarIdentidade ? (demanda?.editor_id ?? null) : sentinela(dados.get('editor_id'), 'nenhum'),
       priority: dados.get('priority') as 'Baixa' | 'Normal' | 'Alta' | 'Urgente',
       approval_date: (dados.get('approval_date') as string) || null,
       post_date: (dados.get('post_date') as string) || null,
@@ -183,6 +186,7 @@ export function FormDemanda({
       </div>
 
       {/* Formato */}
+      {!travarIdentidade && (
       <div className="space-y-1.5">
         <Label htmlFor="format">Formato *</Label>
         <Select
@@ -204,8 +208,9 @@ export function FormDemanda({
           </SelectContent>
         </Select>
       </div>
+      )}
 
-      {ehCortes && (
+      {ehCortes && !travarIdentidade && (
         <Alert variant="warning">
           <AlertDescription>
             Demandas de Cortes recebem o Editor padrão automaticamente e não podem ser assumidas da Fila.
@@ -214,7 +219,7 @@ export function FormDemanda({
       )}
 
       {/* Influencer */}
-      {influencers.length > 0 && (
+      {!travarIdentidade && influencers.length > 0 && (
         <div className="space-y-1.5">
           <Label htmlFor="influencer_id">Influencer</Label>
           <Select name="influencer_id" defaultValue={demanda?.influencer_id || 'nenhum'} onValueChange={marcarSujo}>
@@ -232,7 +237,7 @@ export function FormDemanda({
       )}
 
       {/* Editor */}
-      {!ehCortes && podeDefinirOutroEditor && editores.length > 0 && (
+      {!travarIdentidade && !ehCortes && podeDefinirOutroEditor && editores.length > 0 && (
         <div className="space-y-1.5">
           <Label htmlFor="editor_id">
             Editor

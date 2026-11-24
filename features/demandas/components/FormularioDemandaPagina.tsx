@@ -22,7 +22,9 @@ export async function FormularioDemandaPagina({
   if (!id && !usuario.permissoes.criarDemandas) {
     redirect('/demandas?aviso=sem-permissao');
   }
-  if (id && !usuario.permissoes.editarDemandas) {
+  const edicaoLivre = usuario.permissoes.editarDemandas;
+  const edicaoInfluencer = usuario.perfil === 'Influencer';
+  if (id && !edicaoLivre && !edicaoInfluencer) {
     redirect(`/demandas/${id}?aviso=sem-permissao`);
   }
 
@@ -38,6 +40,9 @@ export async function FormularioDemandaPagina({
     notFound();
   }
   if (demanda) await exigirAcessoDemanda(usuario, demanda);
+  if (demanda && !edicaoLivre && demanda.editor_id !== null) {
+    redirect(`/demandas/${id}?aviso=sem-permissao`);
+  }
 
   return (
     <FormDemanda
@@ -48,6 +53,7 @@ export async function FormularioDemandaPagina({
       influencers={influencers}
       podeDefinirOutroEditor={usuario.permissoes.definirOutroEditor || usuario.permissoes.atribuirEditor}
       podeExcluir={Boolean(id) && usuario.permissoes.excluirDemandas}
+      travarIdentidade={Boolean(id) && !edicaoLivre}
     />
   );
 }

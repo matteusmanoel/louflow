@@ -10,12 +10,15 @@ type ResultadoFicha = { demandaId: string };
 export const defSalvarFichaTecnica: DefinicaoAcao<typeof schemaSalvarFichaTecnica, ResultadoFicha> = {
   nome: 'salvarFichaTecnica',
   schema: schemaSalvarFichaTecnica,
-  permissao: 'editarDemandas',
+  permissao: (u) => u.permissoes.editarDemandas || u.perfil === 'Influencer',
   executar: async ({ tx, usuario, entrada }) => {
-    const [demanda] = await tx<{ id: string }[]>`
-      SELECT id FROM demands WHERE id = ${entrada.demandaId} AND deleted_at IS NULL FOR UPDATE
+    const [demanda] = await tx<{ id: string; editor_id: string | null }[]>`
+      SELECT id, editor_id FROM demands WHERE id = ${entrada.demandaId} AND deleted_at IS NULL FOR UPDATE
     `;
     if (!demanda) throw new ErroDominio('Demanda não encontrada.');
+    if (!usuario.permissoes.editarDemandas && demanda.editor_id !== null) {
+      throw new ErroDominio('Esta demanda já foi assumida e não pode mais ser editada.');
+    }
 
     await tx`
       INSERT INTO technical_sheets (

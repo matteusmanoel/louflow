@@ -77,6 +77,7 @@ const STATUSES_NAO_ATRASADOS = [
 /**
  * Lista Demandas ativas (deleted_at IS NULL), respeitando visibilidade:
  * sem verTodasDemandas → só as do Editor ou do Influencer da sessão.
+ * O Influencer também vê as que ainda não têm Editor.
  */
 export async function listarDemandas(
   sql: Db,
@@ -84,6 +85,7 @@ export async function listarDemandas(
   filtros: FiltrosListarDemandas = {},
 ): Promise<Demanda[]> {
   const podeTudo = usuario.permissoes.verTodasDemandas;
+  const veSemEditor = usuario.perfil === 'Influencer';
 
   const linhas = await sql<
     {
@@ -143,7 +145,11 @@ export async function listarDemandas(
     LEFT JOIN users u_inf ON u_inf.id = d.influencer_id
     LEFT JOIN users u_ed  ON u_ed.id  = d.editor_id
     WHERE d.deleted_at IS NULL
-      ${podeTudo ? sql`` : sql`AND (d.editor_id = ${usuario.id} OR d.influencer_id = ${usuario.id})`}
+      ${podeTudo
+        ? sql``
+        : veSemEditor
+          ? sql`AND (d.editor_id = ${usuario.id} OR d.influencer_id = ${usuario.id} OR d.editor_id IS NULL)`
+          : sql`AND (d.editor_id = ${usuario.id} OR d.influencer_id = ${usuario.id})`}
       ${filtros.periodo
         ? sql`AND d.created_at >= ${filtros.periodo.inicio}::date
               AND d.created_at <  (${filtros.periodo.fim}::date + interval '1 day')`

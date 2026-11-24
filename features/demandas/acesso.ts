@@ -46,6 +46,10 @@ export const REGRAS_ACESSO_DEMANDA: readonly RegraAcessoDemanda[] = [
     permite: ({ usuario, demanda }) => demanda.influencer_id !== null && demanda.influencer_id === usuario.id,
   },
   {
+    nome: 'influencer-sem-editor',
+    permite: ({ usuario, demanda }) => usuario.perfil === 'Influencer' && demanda.editor_id === null,
+  },
+  {
     nome: 'aprovador-delegado',
     permite: async ({ sql, usuario, demanda }) => {
       if (!demanda.editor_id) return false;

@@ -80,6 +80,7 @@ describe('acesso à Demanda: matriz permitido/negado (chamada direta)', () => {
       'ver-todas-demandas',
       'editor-responsavel',
       'influencer-solicitante',
+      'influencer-sem-editor',
       'aprovador-delegado',
       'editor-da-fila',
     ]);
@@ -87,14 +88,14 @@ describe('acesso à Demanda: matriz permitido/negado (chamada direta)', () => {
 });
 
 describe('acesso à Demanda: Fila de Fichas (sem Editor)', () => {
-  it('qualquer Editor vê a Demanda sem Editor; Influencer de outra pessoa e Prêmios não', async () => {
+  it('qualquer Editor e qualquer Influencer veem a Demanda sem Editor; Prêmios não', async () => {
     const c = await cenario();
     const naFila = await demanda({ editorId: null, influencerId: c.influencer.id, formato: 'Ficha técnica' });
     const sql = sqlTeste();
     expect(await podeVerDemanda(sql, sessao(c.outroEditor.id, 'Editor'), naFila)).toBe(true);
     expect(await podeVerDemanda(sql, sessao(c.editor.id, 'Editor'), naFila)).toBe(true);
-    expect(await podeVerDemanda(sql, sessao(c.influencer.id, 'Influencer'), naFila)).toBe(true); // é o solicitante
-    expect(await podeVerDemanda(sql, sessao(c.outroInfluencer.id, 'Influencer'), naFila)).toBe(false);
+    expect(await podeVerDemanda(sql, sessao(c.influencer.id, 'Influencer'), naFila)).toBe(true);
+    expect(await podeVerDemanda(sql, sessao(c.outroInfluencer.id, 'Influencer'), naFila)).toBe(true);
     expect(await podeVerDemanda(sql, sessao(c.premios.id, 'Premios'), naFila)).toBe(false);
   });
 
@@ -102,6 +103,7 @@ describe('acesso à Demanda: Fila de Fichas (sem Editor)', () => {
     const c = await cenario();
     const cortes = await demanda({ editorId: null, formato: 'Cortes' });
     expect(await podeVerDemanda(sqlTeste(), sessao(c.outroEditor.id, 'Editor'), cortes)).toBe(false);
+    expect(await podeVerDemanda(sqlTeste(), sessao(c.outroInfluencer.id, 'Influencer'), cortes)).toBe(true);
     const atribuida = await demanda({ editorId: c.editor.id, formato: 'Ficha técnica' });
     expect(await podeVerDemanda(sqlTeste(), sessao(c.outroEditor.id, 'Editor'), atribuida)).toBe(false);
   });
