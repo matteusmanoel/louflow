@@ -108,9 +108,12 @@ export function captacoesConcluidasNoPeriodo(sql: Db, periodo: Periodo): Promise
       ) AS staff
     FROM captures c
     JOIN users u ON u.id = c.videomaker_id
-    WHERE c.status = 'Concluída'
-      AND c.completed_at IS NOT NULL
-      AND (c.completed_at AT TIME ZONE 'America/Sao_Paulo')::date
+    WHERE c.status <> 'Cancelada'
+      AND (
+        (c.status = 'Concluída' AND c.completed_at IS NOT NULL)
+        OR (c.status = 'Agendada' AND c.ends_at < now())
+      )
+      AND (COALESCE(c.completed_at, c.ends_at) AT TIME ZONE 'America/Sao_Paulo')::date
           BETWEEN ${inicio}::date AND ${fim}::date
   `;
 }

@@ -1,25 +1,24 @@
 import type { HandlerJob } from '@/lib/cron';
 import type { Db } from '@/lib/db';
 import { enviarNotificacao } from './enviador';
-import { lerCadencia } from './consultas';
 import { lerCanal } from './canal';
 import { textoResumoDiario } from './mensagens';
 import { formatarDia, relogioSaoPaulo } from './relogio';
 
 const KIND_RESUMO = 'resumo_diario';
+const HORA_RESUMO = 10;
 
 type LinhaAtrasada = { title: string; prazo: string; editor_id: string | null };
 type LinhaAprovacao = { title: string; influencer_id: string | null };
 
 /**
- * Uma mensagem por dia, no horário configurado (padrão 10h, America/Sao_Paulo).
+ * Uma mensagem por dia, às 10h (America/Sao_Paulo). O painel não altera essa hora.
  * Atrasadas mencionam o editor. Em aprovação, o influencer.
  * Sem pendência, não envia e não trava o dia.
  */
 export const enviarResumoDiario: HandlerJob = async ({ sql, agora }) => {
-  const cadencia = await lerCadencia(sql);
   const relogio = relogioSaoPaulo(agora);
-  if (relogio.hora !== cadencia.horaPrazo) return { afetados: 0 };
+  if (relogio.hora !== HORA_RESUMO) return { afetados: 0 };
   if (!lerCanal().pronto) return { afetados: 0 };
 
   const atrasadas = await sql<LinhaAtrasada[]>`
@@ -75,7 +74,7 @@ export const enviarResumoDiario: HandlerJob = async ({ sql, agora }) => {
 /** O cron diário antigo chama o mesmo resumo. A trava impede uma segunda mensagem. */
 export const enviarAlertasPrazo: HandlerJob = (ctx) => enviarResumoDiario(ctx);
 
-/** O cron de 15 min é o relógio. Fora da hora configurada, não envia. */
+/** Fora das 10h, não envia. A rota de 15 min chama a mesma função e também fica em silêncio. */
 export const avisarPendenciasInfluencer: HandlerJob = (ctx) => enviarResumoDiario(ctx);
 
 async function reivindicar(sql: Db, kind: string, chave: string): Promise<boolean> {

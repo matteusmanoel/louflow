@@ -4,6 +4,7 @@ import { resolverPermissoes } from '@/lib/permissions';
 import type { UsuarioSessao } from '@/lib/session';
 import { criarUsuario, sqlTeste, usarBancoLimpo } from '@/tests/helpers/db';
 import { defAgendarCaptacao, defEditarCaptacao, defCancelarCaptacao } from './_acoes-def';
+import { captacoesConcluidasNoPeriodo } from '@/features/metricas/nota-ranking';
 import { listarCaptacoes, obterCaptacao } from './consultas';
 import { encerrarCaptacoesVencidas } from './jobs';
 
@@ -245,6 +246,19 @@ describe('listarCaptacoes — auto-complete de vencidas', () => {
     const captacao = await obterCaptacao(sqlTeste(), 'VENC2');
     expect(captacao!.status).toBe('Concluída');
     expect(captacao!.completedAt?.getTime()).toBe(passado.getTime());
+  });
+
+  it('entra no ranking pelo fim vencido, sem gravar o status', async () => {
+    const vm = await criarUsuario();
+    const u = await criarUsuario();
+    await sqlTeste()`
+      INSERT INTO captures (id, starts_at, ends_at, videomaker_id, created_by)
+      VALUES ('VENCRANK', '2026-11-20 13:00:00-03', '2026-11-20 15:00:00-03', ${vm.id}, ${u.id})
+    `;
+    const linhas = await captacoesConcluidasNoPeriodo(sqlTeste(), { inicio: '2026-11-01', fim: '2026-11-30' });
+    expect(linhas.some((linha) => linha.editorId === vm.id)).toBe(true);
+    const [gravada] = await sqlTeste()`SELECT status FROM captures WHERE id = 'VENCRANK'`;
+    expect(gravada?.status).toBe('Agendada');
   });
 });
 
