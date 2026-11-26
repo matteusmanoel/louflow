@@ -19,6 +19,11 @@ export const criarReserva = criarAcao({
       throw new ErroDominio('O fim deve ser posterior ao início.');
     }
 
+    await tx`
+      UPDATE media_reservations
+         SET status = 'Finalizada'
+       WHERE status = 'Reservada' AND ends_at < now()
+    `;
     const id = `mr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     await tx`

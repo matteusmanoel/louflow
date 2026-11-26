@@ -268,6 +268,7 @@ export async function carregarDadosTv(sql: Db): Promise<DadosBrutosTv> {
       JOIN users uv ON uv.id = c.videomaker_id
       LEFT JOIN users ui ON ui.id = c.influencer_id
       WHERE c.status = 'Agendada'
+        AND c.ends_at >= now()
         AND c.starts_at >= (timezone('America/Sao_Paulo', now()))::date AT TIME ZONE 'America/Sao_Paulo'
       ORDER BY c.starts_at ASC
       LIMIT ${LINHAS_POR_SLIDE}

@@ -200,13 +200,9 @@ describe('cadência', () => {
       { hora: 9 },
       { obterUsuario: async () => sessaoDe(id), sql: sqlTeste },
     );
-    expect(salvo.ok).toBe(true);
-    expect(await lerCadencia(sqlTeste())).toMatchObject({
-      horaPrazo: 9,
-      horaPendencia: 9,
-      antecedenciaDias: 2,
-      folgaHoras: 24,
-    });
+    expect(salvo.ok).toBe(false);
+    if (!salvo.ok) expect(salvo.mensagem).toMatch(/10h/);
+    expect(await lerCadencia(sqlTeste())).toMatchObject({ horaPrazo: 10, horaPendencia: 10 });
   });
 
   it('ensaio sem canal explica a falta de configuração e não chama a API', async () => {
